@@ -1,0 +1,34 @@
+File Description:
+
+[1] EPIC_Extract.R:
+	Contains two functions [EPIC_Extract() and scaleCounts()]. 
+	
+	- EPIC_Extract():
+	   EPIC_Extract runs the EPIC model
+	   fit but has been edited to output the utilized reference expression matrix and mixture
+	   expression profiles so that ICeDT and EPIC can be fit to the same data using the same data.
+	   Returns the EPIC fit and edited to provided:
+	
+	   $bulk: The mixture expression matrix (nG by nS)
+	   $ref : The utilized version of the TRef matrix
+
+	- scaleCounts():
+	   This function was designed by the EPIC authors (Racle et al) to renormalize mixture 
+	   and reference data across common genes. It is presented unedited but must be utilized
+	   outside the EPIC package as the function was not made available to users.
+
+[2] EPIC_Variance_Weights.R:
+	Provides some sample code for using the reference data utilized by EPIC to produce
+	variance weights that can be used with ICeD-T. Additional commentary provided in the code.
+
+[3] TRef_purData.RData:
+	Contains the purified reference sample data utilized by EPIC, one matrix per cell type with
+	expressions across 23681 genes and 7 cell types. Data is stored as:
+	
+	- XXXdat_r:
+	   Each XXX will define a different cell type (B=B-cells, CAF = Cancer Associated
+	   fibroblasts, CD4 = CD4+ T-cells, CD8 = CD8+ T-cells, E = Endothelials, M = Macrophages,
+	   NK = Natural Killer cells.
+
+
+

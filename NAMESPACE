@@ -1,0 +1,8 @@
+export(ICeDT_Wgt_suppRef)
+export(ICeDT_noWgt_suppRef)
+export(ICeDT_noWgt_noRef)
+export(simFunc)
+
+import(alabama)
+import(stats)
+importFrom(gtools, "rdirichlet")
