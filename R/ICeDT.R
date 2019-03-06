@@ -9,48 +9,19 @@ varFun <- function(x, group){
   return(out)
 }
 
-#-------------------------------------------------------------------#
-# UTILITY FUNCTION 1: lmInit                                        #
-#-------------------------------------------------------------------#
-# INPUT:
-#-------------------------------------------------------------------#
-# Variable      | Description                                       #
-#---------------|---------------------------------------------------#
-#      yr       | Vector of length G+1 which contains the gene exp. #
-#               | for a single subject across all genes and tumor   #
-#               | purity in position 1.                             #
-#---------------|---------------------------------------------------#
-#      Zm       | Matrix of size (GxQ) which contains the reference #
-#               | gene expression profiles for all cell types and   #
-#               | genes.                                            #
-#---------------|---------------------------------------------------#
-#      Zt       | Vector of length G which contains the reference   #
-#               | gene expression profile for the tumor tissues.    #
-#-------------------------------------------------------------------#
 
-# OUTPUT:
-#-------------------------------------------------------------------#
-# LABEL         | DESCRIPTION                                       #
-#-------------------------------------------------------------------#
-#     rho       | Estimate of subject's cell type abundance profile #
-#-------------------------------------------------------------------#
-
-lmInit<-function(yr, Zm, Zt){
-  eta = yr[1]
-  y   = yr[-c(1)]
+# yr = c(tumor purity, expression of nG genes)
+# Z is the expression signature matrix
+lmInit<-function(yr, Z){
+  rho_t = yr[1]
+  y     = yr[-c(1)]
   
-  if(is.null(Zt)){
-    offVal = rep(0, length(y))
-  } else {
-    offVal = Zt*eta
-  }
-  
-  initMod = lm(y~Zm, offset=offVal)
+  initMod = lm(y~Z)
   
   rho  = coef(initMod)[-1]
   wneg = which(rho<0.01)
   rho[wneg] = 0.01
-  rho = (rho/sum(rho))*(1-eta)
+  rho = (rho/sum(rho))*(1-rho_t)
   
   return(rho)
 }
@@ -61,16 +32,11 @@ lmInit<-function(yr, Zm, Zt){
 #-------------------------------------------------------------------#
 
 sigmaInit <- function(x, Z, nG){
-  # Qval is the length of rho in the folloiwng. 
-  # rho was esimated by lmInit that ignores tumor cell type
-  # hence its lenght is ncol(Z) - 1
-  Qval   = ncol(Z) - 1
+  nCT    = ncol(Z)
   Y      = x[c(1:nG)]
   logY   = log(Y)
-  rho    = x[c((nG+1):(nG+Qval))]
-  rho_i0 = x[(nG+Qval+1)]
-  
-  eta_ij = Z %*% c(0, rho)
+  rho    = x[c((nG+1):(nG+nCT))]
+  eta_ij = Z %*% rho
   
   resid = Y - eta_ij
   Q3val = quantile(abs(resid), probs = c(0.75))
@@ -100,14 +66,6 @@ sigmaInit <- function(x, Z, nG){
 
 #-------------------------------------------------------------------#
 # Update Functions (HOMOSCEDASTIC)                                  # 
-#                                                                   #
-# DESCRIPTION:                                                      #
-#   Contains all functions necessary for the update of the model    #
-#   parameters, in the following order:                             #
-#       (1) Subject Specific Proportions                            #
-#       (2) Pooled/Scaled Aberrant Marker Profile                   #
-#       (3) Cancer Profile                                          #
-#       (4) EM Weights (Posterior Means)                            #
 #-------------------------------------------------------------------#
 
 #-------------------------------------------------------------------#
@@ -139,14 +97,9 @@ extractFunction <- function(compList, element){
 }
 
 #----------------------- Gradient Functions ------------------------#
-# Z is still composed of a vector for "tumor" and everything else.
-# These functions are used to compute gradients under the case where 
-# the tumor purity is known (fix) vs unknown (nofix). 
 
-gradFunc_noFix <- function(x, logY, rho_i0, Z, sigma2C, sigma2A, EM_wgt){
-  rho = c(0, x)
-  
-  eta_ij = Z%*%rho
+gradFunc_noPurity <- function(x, logY, Z, sigma2C, sigma2A, EM_wgt){
+  eta_ij = Z %*% x
   mu_ijC = log(eta_ij) - sigma2C/2
   d_ijC  = logY - mu_ijC
   
@@ -155,15 +108,13 @@ gradFunc_noFix <- function(x, logY, rho_i0, Z, sigma2C, sigma2A, EM_wgt){
   
   c1 = c(d_ijC*EM_wgt/(sigma2C*eta_ij)) + c(d_ijA*(1-EM_wgt)/(sigma2A*eta_ij))
   
-  out = t(Z[,-c(1)]) %*% matrix(c1,ncol=1)
+  out = t(Z) %*% matrix(c1,ncol=1)
   
   return(out)
 }
 
-gradFunc_Fix <- function(x, logY, rho_i0, Z, sigma2C, sigma2A, EM_wgt){
+gradFunc_givenPurity <- function(x, logY, rho_i0, Z, sigma2C, sigma2A, EM_wgt){
   rho = c(x, 1 - rho_i0 -sum(x))
-  rho = c(0, rho)
-  
   eta_ij = Z%*%rho
   
   mu_ijC = log(eta_ij) - sigma2C/2
@@ -175,12 +126,12 @@ gradFunc_Fix <- function(x, logY, rho_i0, Z, sigma2C, sigma2A, EM_wgt){
   c1 = c(d_ijC*EM_wgt/(sigma2C*eta_ij)) + c(d_ijA*(1-EM_wgt)/(sigma2A*eta_ij))
   
   # the derivative was derived using all cell type composition of non-tumor 
-  # cell types. Here since the proportion of last cell type is 
-  # rho_K = constant - sum(x), so its derivative is the original derivative
+  # cell types. Since the proportion of last cell type is 
+  # rho_K = constant - sum(x), its derivative is the original derivative
   # multiples d [rho_K] / d [rho_k], for k = 1 to K-1, which is - 1 
   # so it is equivalent to replace Z by Z_star
-  Qval   = ncol(Z)-1
-  Z_star = Z[,-c(1)] %*% rbind(diag(rep(1,(Qval-1))), rep(-1,(Qval-1)))
+  nCT    = ncol(Z)
+  Z_star = Z %*% rbind(diag(rep(1,(nCT-1))), rep(-1,(nCT-1)))
   
   out = t(Z_star) %*% matrix(c1,ncol=1)
   
@@ -208,25 +159,18 @@ sigma2_Update <- function(logY, log_eta_ij, EM_wgt, AB_Up=FALSE){
 # hin[j] > 0 for all j
 # hin.jac: Jacobian of hin
 
-hin_func_noFix <- function(x, rho_i0, ...){
+hin_func_noPurity <- function(x, ...){
   return(c(x-0.005, 1-sum(x)-0.005))
 }
 
-hin_jacob_noFix <- function(x, rho_i0, ...){
+hin_jacob_noPurity <- function(x, ...){
   return(rbind(diag(1,length(x)), rep(-1,length(x))))
 }
 
-logLik_noFix <- function(x, logY, rho_i0, Z, sigma2C, sigma2A, EM_wgt){
-  rho  = c(0, x)
-  
-  eta_ij = Z %*% rho
-  # if(any(eta_ij < 0)){
-  #   print(head(Z))
-  #   print(rho)
-  #   stop("0 in eta_ij\n")
-  # }
-  mu_ijC = log(eta_ij) - sigma2C/2
-  mu_ijA = log(eta_ij) - sigma2A/2
+logLik_noPurity <- function(x, logY, Z, sigma2C, sigma2A, EM_wgt){
+  log_eta_ij = log(Z %*% x)
+  mu_ijC = log_eta_ij - sigma2C/2
+  mu_ijA = log_eta_ij - sigma2A/2
   
   out = sum(EM_wgt*dnorm(logY, mean = mu_ijC, sd = sqrt(sigma2C), log = TRUE)) + 
     sum((1-EM_wgt)*dnorm(logY, mean = mu_ijA, sd = sqrt(sigma2A), log = TRUE))
@@ -235,16 +179,16 @@ logLik_noFix <- function(x, logY, rho_i0, Z, sigma2C, sigma2A, EM_wgt){
 }
 
 #----------------- Likelihood (Fixed) ----------------------#
-hin_func_Fix <- function(x, rho_i0, ...){
+hin_func_givenPurity <- function(x, rho_i0, ...){
   return(c(x-0.005, 1-rho_i0-sum(x)-0.005))
 }
 
-hin_jacob_Fix <-function(x, rho_i0, ...){
+hin_jacob_givenPurity <-function(x, rho_i0, ...){
   return(rbind(diag(1,length(x)), rep(-1,length(x))))
 }
 
-logLik_Fix <- function(x, logY, rho_i0, Z, sigma2C, sigma2A, EM_wgt){
-  rho  = c(0, x, 1-rho_i0-sum(x))
+logLik_givenPurity <- function(x, logY, rho_i0, Z, sigma2C, sigma2A, EM_wgt){
+  rho  = c(x, 1-rho_i0-sum(x))
   
   eta_ij = Z %*% rho
   mu_ijC = log(eta_ij) - sigma2C/2
@@ -258,20 +202,19 @@ logLik_Fix <- function(x, logY, rho_i0, Z, sigma2C, sigma2A, EM_wgt){
 
 #------------------- Actual Update Functions ------------------------#
 
-updatePropn_Single <- function(x, Z, nCell, nG, maxIter_prop, useRho){
+updatePropn_Single <- function(x, Z, nCT, nG, maxIter_prop, givenPurity){
   #----------------------------------------#
   # Extract Info                           #
   #----------------------------------------#
   rho_i0 = x[1]
-  urho_1 = x[c(2:(nCell+1))]
-  logY   = x[c((nCell+2):(nCell+nG+1))]
-  EM_wgt = x[c((nCell+nG+2):(nCell+2*nG+1))]
+  urho_1 = x[c(2:(nCT+1))]
+  logY   = x[c((nCT+2):(nCT+nG+1))]
+  EM_wgt = x[c((nCT+nG+2):(nCT+2*nG+1))]
   
   #----------------------------------------#
   # Initialize Values                      #
   #----------------------------------------#
-  
-  eta_ij     = drop(Z %*% matrix(c(0,urho_1), ncol=1))
+  eta_ij     = drop(Z %*% matrix(urho_1, ncol=1))
   log_eta_ij = log(eta_ij)
   
   sigma2C_1  = sigma2_Update(logY = logY, log_eta_ij = log_eta_ij,
@@ -297,24 +240,24 @@ updatePropn_Single <- function(x, Z, nCell, nG, maxIter_prop, useRho){
     #----------------------------------#
     # Update Rho values                #
     #----------------------------------#
-    if(useRho){
-      auglagOut = auglag(par = urho_0[-c(nCell)], fn = logLik_Fix, 
-                         gr = gradFunc_Fix, hin = hin_func_Fix, 
-                         hin.jac = hin_jacob_Fix, logY = logY, 
+    if(givenPurity){
+      auglagOut = auglag(par = urho_0[-c(nCT)], fn = logLik_givenPurity, 
+                         gr = gradFunc_givenPurity, hin = hin_func_givenPurity, 
+                         hin.jac = hin_jacob_givenPurity, logY = logY, 
                          rho_i0 = rho_i0, Z=Z, sigma2C = sigma2C_0, 
                          sigma2A = sigma2A_0, EM_wgt = EM_wgt, 
                          control.optim = list(fnscale=-1), 
                          control.outer = list(trace=FALSE))
       
-      urho_1[c(1:(nCell-1))] = auglagOut$par
-      urho_1[nCell] = 1-rho_i0-sum(auglagOut$par)
+      urho_1[c(1:(nCT-1))] = auglagOut$par
+      urho_1[nCT] = 1-rho_i0-sum(auglagOut$par)
       
       urho_1 = correctRho(est = urho_1, total = 1-rho_i0)
     } else {
-      auglagOut = auglag(par = urho_0, fn = logLik_noFix, 
-                         gr = gradFunc_noFix, hin = hin_func_noFix, 
-                         hin.jac = hin_jacob_noFix, logY = logY, 
-                         rho_i0 = rho_i0, Z=Z, sigma2C = sigma2C_0, 
+      auglagOut = auglag(par = urho_0, fn = logLik_noPurity, 
+                         gr = gradFunc_noPurity, hin = hin_func_noPurity, 
+                         hin.jac = hin_jacob_noPurity, logY = logY, 
+                         Z=Z, sigma2C = sigma2C_0, 
                          sigma2A = sigma2A_0, EM_wgt = EM_wgt, 
                          control.optim=list(fnscale=-1), 
                          control.outer = list(trace=FALSE))
@@ -326,7 +269,7 @@ updatePropn_Single <- function(x, Z, nCell, nG, maxIter_prop, useRho){
     #----------------------------------#
     # Update Computational Values      #
     #----------------------------------#
-    eta_ij     = drop(Z %*% matrix(c(0,urho_1), ncol=1))
+    eta_ij     = drop(Z %*% matrix(urho_1, ncol=1))
     log_eta_ij = log(eta_ij)
     sigma2C_1  = sigma2_Update(logY = logY, log_eta_ij = log_eta_ij, 
                                EM_wgt = EM_wgt, AB_Up = FALSE)
@@ -344,21 +287,21 @@ updatePropn_Single <- function(x, Z, nCell, nG, maxIter_prop, useRho){
 }
 
 #------------------- Update Multiple Subjects ----------------------#
-updatePropn_All <- function(logY, rho_init, fixedCT_rho, Z, maxIter_prop, 
-                            EM_wgt, useRho){
+updatePropn_All <- function(logY, rho_init, tumorPurity, Z, maxIter_prop, 
+                            EM_wgt, givenPurity){
   
-  PropnInfo = rbind(fixedCT_rho, rho_init, logY, EM_wgt)
+  PropnInfo = rbind(tumorPurity, rho_init, logY, EM_wgt)
   
   out = apply(X=PropnInfo, MARGIN = 2, FUN = updatePropn_Single, 
-              Z=Z, useRho = useRho, maxIter_prop = maxIter_prop, 
-              nCell=(nrow(rho_init)), nG = nrow(logY))
+              Z=Z, givenPurity = givenPurity, maxIter_prop = maxIter_prop, 
+              nCT=(nrow(rho_init)), nG = nrow(logY))
   
   #--- Reshape Output ---#
   rho_Mat   = extractFunction(compList = out, element = "rho_i")
-  sig2M_Mat = extractFunction(compList = out, element = "sigma2C_i")
+  sig2C_Mat = extractFunction(compList = out, element = "sigma2C_i")
   sig2A_Mat = extractFunction(compList = out, element = "sigma2A_i")
   
-  return(list(rho_Curr = rho_Mat, sig2M_Curr = sig2M_Mat, 
+  return(list(rho_Curr = rho_Mat, sig2C_Curr = sig2C_Mat, 
               sig2A_Curr = sig2A_Mat))
 }
 
@@ -380,7 +323,7 @@ updateWgts <- function(logY, rho_init, sigma2C, sigma2A, Z, propC){
     # Amu_ij for Aberrant Marker Gene Probs        #
     #----------------------------------------------#
     
-    eta_ij = Z %*% matrix(c(0, rho_init_i), ncol=1)
+    eta_ij = Z %*% matrix(rho_init_i, ncol=1)
     Cmu_ij = log(eta_ij) - sigma2C[i]/2
     Amu_ij = log(eta_ij) - sigma2A[i]/2
     C_lLik = dnorm(logY_i, mean = Cmu_ij, sd = sqrt(sigma2C[i]), log = TRUE)
@@ -395,7 +338,7 @@ updateWgts <- function(logY, rho_init, sigma2C, sigma2A, Z, propC){
   return(EM_wgt)
 }
 
-PropPlus_Update<- function(Y, rho_0, fixedCT_rho, useRho, 
+PropPlus_Update<- function(Y, rho_0, tumorPurity, givenPurity, 
                            sigma2C_0, sigma2A_0, Z, propC_0,
                            maxIter_PP, maxIter_prop, nG,
                            rhoConverge){
@@ -407,25 +350,24 @@ PropPlus_Update<- function(Y, rho_0, fixedCT_rho, useRho,
   propC_t1   = propC_0
   
   for(j in 1:maxIter_PP){
-    #----  Reset the Param   ----#
     rho_t0     = rho_t1
     sigma2C_t0 = sigma2C_t1
     sigma2A_t0 = sigma2A_t1
     propC_t0   = propC_t1
     
-    #---- Update EM Weights  ----#
+    # Update EM Weights
     EM_wgt = updateWgts(logY = logY, rho_init = rho_t0, 
                         sigma2C = sigma2C_t0, sigma2A = sigma2A_t0, 
                         Z = Z, propC = propC_t0)
     
-    #---- Update Proportions ----#
+    # Update Proportions
     PropP_t1  = updatePropn_All(logY = logY, rho_init = rho_t0, 
-                                fixedCT_rho = fixedCT_rho,
+                                tumorPurity = tumorPurity,
                                 Z = Z, maxIter_prop = maxIter_prop, 
-                                EM_wgt = EM_wgt, useRho = useRho)
+                                EM_wgt = EM_wgt, givenPurity = givenPurity)
     
     rho_t1     = PropP_t1$rho_Curr
-    sigma2C_t1 = PropP_t1$sig2M_Curr
+    sigma2C_t1 = PropP_t1$sig2C_Curr
     sigma2A_t1 = PropP_t1$sig2A_Curr
     
     #---- Update Cons. MarkP ----#
@@ -440,183 +382,145 @@ PropPlus_Update<- function(Y, rho_0, fixedCT_rho, useRho,
     message("Current PropPlus Iter ",j,": Max Diff of ",max(max_rho_diff))
   }
   
-  return(list(Rho = rho_t1, sigma2C = sigma2C_t1, sigma2A = sigma2A_t1, 
+  return(list(rho = rho_t1, sigma2C = sigma2C_t1, sigma2A = sigma2A_t1, 
               propC = propC_t1, Iter = j, max_rho_diff = max_rho_diff))
 }
 
 # no weights means no gene-specific weight, 
 # no reference means cell type-specific expression will be estimated
-ICeDT_noWgt_noRef <- function(Y, X, cellType, fixedCT = NULL, 
-                              fixedCT_rho = NULL, useRho = FALSE, 
-                              borrow4SD = TRUE, maxIter_prop = 100, 
-                              maxIter_PP = 100, rhoConverge = 1e-4){
+ICeDT <- function(Y, X, refMat=TRUE, tumorPurity=NULL, borrow4SD=TRUE, 
+                  maxIter_prop=100, maxIter_PP=100, rhoConverge=1e-4){
   
   #-----------------------------------------------------#
   # Check Input                                         #
   #-----------------------------------------------------#
+  
+  cellType = colnames(X)
+  
+  if(any(cellType == "")){
+    stop("colnames(X) are cell type labels and cannot be empty.")
+  }
   
   if(nrow(Y)!=nrow(X)){
     stop("Expression Inputs do not have the same number of genes!")
   }
 
   if(any(is.na(Y))|any(is.na(X))){
-     stop("Y and X must not contain any NA entries. Please remove
-           any rows with NA and try again.")
+     stop("Y and X must not contain any NA entries.")
   }
   
-  if(any(Y<0) | any(X<0)){
-    stop("As normalized expression values, Y and X should be
-          non-negative. Please correct entries less than 0
-          and try again.")
+  if(any(Y < 0) | any(X < 0)){
+    stop("Y and X should be non-negative.")
   }
   
-  if(any(Y<1e-4) | any(X<1e-4)){
-    message("X or Y contain expression values smaller than 1e-4. Adding
-             small correction (1e-5) to ensure log transformation
-             is viable.")
-    Y = Y+1e-5
-    X = X+1e-5
+  if(any(Y < 1e-4){
+    message("Adding 1e-5 to Y to ensure vallid log transformation.")
+    Y = Y + 1e-5
   }
   
-  if(is.null(fixedCT)){
-    message("No fixed cell type set, All proportions will be estimated.")
-    fixedCT_rho = rep(0,length(ncol(Y)))
-    if(!is.null(fixedCT_rho)){
-      message("since fixeCT is null, values of fixedCT_rho is discarded.")
-    }
-  } else {
-    if(!(fixedCT %in% unique(cellType))){
-      stop("The value of fixedCT is not present in cellType vector!")
-    }
-    if(ncol(Y) != length(fixedCT_rho)){
-      stop("ncol of Y does not equal to length of fixedCT_rho.")
-    } else if(!all(colnames(Y) == names(fixedCT_rho))){
-      stop("colnames of Y does not match with names of fixedCT_rho.")
-    }
+  if(any(X < 1e-4){
+    message("Adding 1e-5 to X to ensure vallid log transformation.")
+    X = X + 1e-5
   }
-  
-  if(ncol(X) != length(cellType)){
-    stop("Number of cell type labels does not match the number of 
-         samples in pure references!")
-  }
-  
-  ctTable = table(cellType)
-  
-  if(min(ctTable)<2){
-    stop("At least two pure samples are needed for each cell type.")
-  }
-  
-  #-----------------------------------------------------#
-  # EXTRACTING SAMPLE INFO                              #
-  #-----------------------------------------------------#
-
-  nnct = tapply(cellType, cellType, length)
-  ntot = sum(nnct)
   
   sortCT = sort(unique(cellType))
   
   nG  = nrow(X) # number of genes
   nP  = ncol(X) # number of purified samples
   nS  = ncol(Y) # number of bulk (mixed cell type) samples
-  nCT = length(sortCT) # number of cell types
-  
-  #-----------------------------------------------------#
-  # Pure Sample Estimation                              #
-  #-----------------------------------------------------#
-  
-  logX = log(X) 
-  
-  CT_MU  = t(apply(X = logX, MARGIN = 1, FUN = meanFun, 
-                   group = cellType))
-  
-  CT_var = t(apply(X = logX, MARGIN = 1, FUN = varFun,
-                   group = cellType))
-  
-  #------------------ Quick Check ----------------------#
-  
-  if(any(colnames(CT_MU) != sortCT)){
-    message("Problems with tapply order!")
-  }
-  
-  if(any(colnames(CT_var) != sortCT)){
-    message("Problems with tapply order!")
-  }
-  
-  if(any(names(nnct) != sortCT)){
-    message("Problems with tapply order!")
-  }
-  
-  #-- Borrow information across cell types for SD estimation --#
-  
-  if(borrow4SD){
-    X1     = logX
-    ntot_p = length(cellType) - length(which(cellType==fixedCT))
-    
-    for(i in 1:nCT){
-      if(sortCT[i] == fixedCT){ next }
-      wwi = which(cellType == sortCT[i])
-      X1[,wwi] = logX[,wwi] - CT_MU[,i]
-    }
-    
-    varXPop = apply(X1[,-which(cellType==fixedCT)], 1, var)
-    
-    for(i in 1:nCT){
-      if(sortCT[i] == fixedCT){ next }
-      wi = (nnct[i])/(ntot_p)
-      CT_var[,i] = wi*CT_var[,i] + (1-wi)*varXPop
-    }
-  }
-  
-  #----------------- Correct Order ---------------------#
-  # Rearrange order so that fixed cell type (tumor) is the first one
-  fIdx   = which(colnames(CT_MU)==fixedCT)
-  CT_MU  = cbind(CT_MU[,fIdx],  CT_MU[,-c(fIdx)])
-  CT_var = cbind(CT_var[,fIdx], CT_var[,-c(fIdx)])
-  colnames(CT_MU)[1]  = fixedCT
-  colnames(CT_var)[1] = fixedCT
-  
-  #-----------------------------------------------------#
-  # INITIALIZATION                                      #
-  #-----------------------------------------------------#
-  # Z are cell type-specific gene expression in original 
-  # scale, it was denoted by gamma in the manuscript
-  # Edit to ensure tumor contribution is 0
-  Z     = exp(CT_MU + CT_var/2)
-  Z[,1] = rep(0, nG)
-  
-  #----------- Mixture Sample Proportions --------------#
-  # lmInit function estimate cell type compositon after 
-  # excluding tumor cell type, and thus length(rho_1) = ncol(Z_) -1
-  rho_1 = apply(X = rbind(fixedCT_rho, Y), MARGIN=2, FUN=lmInit,
-                Zm=Z[,-c(1)], Zt=Z[,1])
+  givenPurity = !(is.null(tumorPurity))
 
-  #----------- Aberrant Profile Initial ----------------#
-  sigma_1 = apply(X = rbind(Y, rho_1, fixedCT_rho), MARGIN=2, 
-                  FUN = sigmaInit, Z = Z, nG = nG)
+  if(!is.null(tumorPurity)){
+    if(ncol(Y) != length(tumorPurity)){
+      stop("ncol of Y does not equal to the length of tumorPurity.")
+    } else if(!all(colnames(Y) == names(tumorPurity))){
+      stop("colnames of Y do not match with the names of tumorPurity.")
+    }
+  }else{
+    tumorPurity = rep(0, ncol(Y))
+    names(tumorPurity) = colnames(Y)
+  }
+  
+  if(refMat){
+    if(any(duplicated(colnames(X)))){
+      stop("Reference matirx X duplicated colnames.")
+    }
+    Z = X[,sortCT]
+  }else{
+    ctTable = table(cellType)
+    
+    if(min(ctTable)<2){
+      stop("At least two pure samples are needed for each cell type.")
+    }
+    
+    #-----------------------------------------------------#
+    # estimate signature matrix                           #
+    #-----------------------------------------------------#
+    
+    logX   = log(X) 
+    
+    CT_MU  = t(apply(X = logX, MARGIN = 1, FUN = meanFun, 
+                     group = cellType))
+    
+    CT_var = t(apply(X = logX, MARGIN = 1, FUN = varFun,
+                     group = cellType))
+    
+    if(any(colnames(CT_MU) != sortCT) || any(colnames(CT_var) != sortCT){
+      stop("Problems with tapply order!")
+    }
+    
+    # Borrow information across cell types for SD estimation 
+    if(borrow4SD){
+      X1     = logX
+      ntot_p = length(cellType)
+      
+      for(i in 1:length(sortCT)){
+        wwi = which(cellType == sortCT[i])
+        X1[,wwi] = logX[,wwi] - CT_MU[,i]
+      }
+      
+      varXPop = apply(X1, 1, var)
+      
+      for(i in 1:length(sortCT)){
+        wi = (sum(cellType == sortCT[i]))/ntot_p
+        CT_var[,i] = wi*CT_var[,i] + (1-wi)*varXPop
+      }
+    }
+    
+    #-----------------------------------------------------#
+    # Generate cell type-specific expressio matrix        #
+    #-----------------------------------------------------#
+    Z = exp(CT_MU + CT_var/2)
+  }
+  
+  # lmInit function estimate cell type compositon by linear regression 
+  rho_1 = apply(X = rbind(tumorPurity,Y), MARGIN=2, FUN=lmInit, Z=Z)
+
+  # estimate residual variance for consistent/aberrant genes
+  sigma_1 = apply(X = rbind(Y, rho_1), MARGIN=2, FUN=sigmaInit, Z=Z, nG=nG)
   
   sigma2C_1 = sigma_1[1,]
   sigma2A_1 = sigma_1[2,]
   
-  #---- percent of consistent genes per sample -------#
+  # percent of consistent genes per sample 
   propC_1   = rep(0.5, nS)
   
   #-----------------------------------------------------#
-  # IMPLEMENT ALGORITHMIC FIT                           #
+  # EM algorithm                                        #
   #-----------------------------------------------------#
   propC_0   = propC_1
   rho_0     = rho_1
   sigma2C_0 = sigma2C_1
   sigma2A_0 = sigma2A_1
   
-  #------ Update Proportions + -----#
   PropPlus_Out = suppressWarnings(
-    PropPlus_Update(Y = Y, rho_0 = rho_0, fixedCT_rho = fixedCT_rho, 
-                    useRho = useRho, sigma2C_0 = sigma2C_0, 
+    PropPlus_Update(Y = Y, rho_0 = rho_0, tumorPurity = tumorPurity, 
+                    givenPurity = givenPurity, sigma2C_0 = sigma2C_0, 
                     sigma2A_0 = sigma2A_0, Z = Z, propC_0 = propC_0, 
                     maxIter_PP = maxIter_PP, maxIter_prop = maxIter_prop, 
                     nG = nG, rhoConverge = rhoConverge))
   
-  rho_1     = PropPlus_Out$Rho
+  rho_1     = PropPlus_Out$rho
   sigma2C_1 = PropPlus_Out$sigma2C
   sigma2A_1 = PropPlus_Out$sigma2A
   propC_1   = PropPlus_Out$propC
@@ -629,21 +533,15 @@ ICeDT_noWgt_noRef <- function(Y, X, cellType, fixedCT = NULL,
   # OUTPUT                                              #
   #-----------------------------------------------------#
   
-  if(useRho){
-    fidx = which(sortCT==fixedCT)
-    
-    rho_final  = cbind(fixedCT_rho,t(rho_1))
-    colnames(rho_final) = c(fixedCT,sortCT[-fidx])
-    rownames(rho_final) = colnames(Y)
+  if(givenPurity){
+    rho_final  = cbind(tumorPurity, t(rho_1))
   } else {
-    fidx = which(sortCT==fixedCT)
-    
-    fixedCT_rho_est = 1-colSums(rho_1)
-    
-    rho_final  = cbind(fixedCT_rho_est,t(rho_1))
-    colnames(rho_final) = c(fixedCT,sortCT[-fidx])
-    rownames(rho_final) = colnames(Y)
+    tumorPurity_est = 1 - colSums(rho_1)
+    rho_final  = cbind(tumorPurity_est, t(rho_1))
   }
+  
+  colnames(rho_final) = c("tumor", sortCT)
+  rownames(rho_final) = colnames(Y)
   
   outList = list(rho            = rho_final,
                  fixedCT        = fixedCT,

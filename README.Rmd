@@ -1,12 +1,12 @@
 ---
 output:
-  pdf_document: default
   html_document: default
+  pdf_document: default
 ---
 # ICeDT
 Immune Cell Deconvolution in Tumor tissues
 
-## Update for version 0.99.1, from 2019/02/25 to 2019/03/04
+## Update for version 0.99.1, 2019 02/25 to 03/06
 
 ### Nomenclature
 
@@ -15,7 +15,7 @@ Immune Cell Deconvolution in Tumor tissues
 * Use lower case at the begining of the variable name. For example Sigma2C is changed to sigma2C. 
 * Y: observed expression data from bulk (mixed) samples
 * X: observed expression data from purified samples, assume at least two samples per cell type. 
-* Z: estimated cell type-specific expression for each cell type. Previously there were notations such Z_0 and Z_1 and they are the same. Now the notations are unified to be Z. 
+* Z: estimated cell type-specific expression for each cell type. Previously there were notations such Z_0 and Z_1 and they are the same. Now the notations are unified to be Z. Prevoiusly Z includes expression from tumor, which are unknown in practice or assumed to be 0. In this update, Z does not includes expression from tumor. 
 
 ### Simulation codes
 
@@ -66,6 +66,8 @@ Immune Cell Deconvolution in Tumor tissues
 
 ## Handeling the special cell type (fixed cell type) of tumor cells. 
 
+### Prevoius approach 
+
 1. When estimating cell type-specific gene expression, force gene expression from tumor cells to be 0. No matter what is the observed gene expression from tumor cells. 
 
 ```{r eval=FALSE}
@@ -97,9 +99,6 @@ updateWgts <- function(logY, rho_init, sigma2C, sigma2A, Z, propC){
     C_lLik = dnorm(logY_i, mean = Cmu_ij, sd = sqrt(sigma2C[i]), log = TRUE)
     A_lLik = dnorm(logY_i, mean = Amu_ij, sd = sqrt(sigma2A[i]), log = TRUE)
     
-    #-----------------------------------#
-    # Compiling Weights                 #
-    #-----------------------------------#
     EM_wgt[,i] = 1/(1+((1-propC[i])/propC[i])*exp(A_lLik-C_lLik))
   }
   
@@ -142,7 +141,7 @@ When estimating rho and ```useRho``` is TRUE, first estimate rho given proportio
     } 
 ```
 
-The objective function for optimation do consider the gene expression from tumor cells. This is the only place where gene expressoin from tumor cells (1st column of Z) is used. 
+The objective function for optimation do consider the gene expression from tumor cells. This is the only place where gene expressoin from tumor cells (1st column of Z) is used, but it was assumed cell type proprtion of tumor is 0. In addition, in function ```ICeDT_noWgt_noRef```, ```Z[,1]``` is initilized by 0, 
 
 ```{r eval=FALSE}
 logLik_Fix <- function(x, logY, rho_i0, Z, sigma2C, sigma2A, EM_wgt){
@@ -159,7 +158,41 @@ logLik_Fix <- function(x, logY, rho_i0, Z, sigma2C, sigma2A, EM_wgt){
 }
 ```
 
-However, since in function ```ICeDT_noWgt_noRef```, ```Z[,1]``` is initilized by 0, 
+### New approach 
+
+1. Change the dimeion of Z so that it does not inlcude gene expression from tumor cells. We have to assume for those marker genes, the expression from tumor cells are 0 anyway.  
+
+2. Modify those codes mentioned above to remove tumor purity from ```rho```, so that ```eta_ij = Z %*% rho``` has correct dimension. 
+
+3. Modify the code so that the observed cell type-specific expression data X does not include gene expression data from tumor cells. 
+
+4. Remove the paramerer ```fixed_CT``` that specifies which cell type is tumor cell. 
+
+## Compare functions in noWgt_noRef vs. noWgt_suppRef_\*
+
+1. ```lmInit``` = ```lmInit_noWgt_suppRef```
+
+2. ```sigmaInit``` = ```AbProf_Init_noWgt_suppRef```, except calling function ```sigma2_Update``` or ```HS_Sigma2_Update_noWgt_suppRef```. 
+
+3. ```sigma2_Update``` = ```HS_Sigma2_Update_noWgt_suppRef```
+
+4. ```gradFunc_noFix``` = ```HS_GradFunc_noFix_noWgt_suppRef```
+
+5. ```gradFunc_Fix``` = ```HS_GradFunc_Fix_noWgt_suppRef```
+
+6. ```logLik_noFix``` = ```HS_ComputeLik_noFix_noWgt_suppRef```
+
+7. ```logLik_Fix``` = ```HS_ComputeLik_Fix_noWgt_suppRef```
+
+8. ```updatePropn_Single``` = ```HS_UpdatePropn_Single_noWgt_suppRef```
+
+9. ```updatePropn_All``` = ```HS_UpdatePropn_All_noWgt_suppRef```
+
+10. ```updateWgts``` = ```HS2_UpdateWgts_All_noWgt_suppRef```
+
+11. ```PropPlus_Update``` = ```PropPlus_Update_noWgt_suppRef```
+
+The only difference between noWgt_noRef and noWgt_suppRef is that the former first estimate sigmature matrix from observed cell type-specific gene expression data. So **remove all the redundant functions and just add an parameter to indicate whether the input is  cell type-specific gene expression or signature matrix**. 
 
 ## To be fixed.
 

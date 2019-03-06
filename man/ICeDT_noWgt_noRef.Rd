@@ -7,7 +7,7 @@ ICeD-T Model Fit (No Weights, No Supplied Reference)
 This function uses purified, immune reference sample data and mixed expression profiles to estimate the cell type composition of tumor samples. This function can utilize information regarding tumor purity if available.
 }
 \usage{
-ICeDT_noWgt_noRef(Y, X, cellType, fixedCT = NULL,
+ICeDT_noWgt_noRef(Y, X, fixedCT = NULL,
 fixedCT_rho, useRho = FALSE, borrow4SD = TRUE,
 maxIter_prop = 100, maxIter_PP = 100, rhoConverge = 1e-04)
 }
