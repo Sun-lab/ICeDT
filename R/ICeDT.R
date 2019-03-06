@@ -9,9 +9,12 @@ varFun <- function(x, group){
   return(out)
 }
 
-
+#-------------------------------------------------------------------#
+# initial estimate of cell type composition
 # yr = c(tumor purity, expression of nG genes)
 # Z is the expression signature matrix
+#-------------------------------------------------------------------#
+
 lmInit<-function(yr, Z){
   rho_t = yr[1]
   y     = yr[-c(1)]
@@ -27,8 +30,7 @@ lmInit<-function(yr, Z){
 }
 
 #-------------------------------------------------------------------#
-# UTILITY FUNCTION 2: initial estimate of variance  for             #
-# consistent or abberant genes                                      #
+#  initial estimate of variance for consistent or abberant genes                                      #
 #-------------------------------------------------------------------#
 
 sigmaInit <- function(x, Z, nG){
@@ -64,13 +66,6 @@ sigmaInit <- function(x, Z, nG){
 
 
 
-#-------------------------------------------------------------------#
-# Update Functions (HOMOSCEDASTIC)                                  # 
-#-------------------------------------------------------------------#
-
-#-------------------------------------------------------------------#
-#                SECTION 1 - Update Proportions                     #
-#-------------------------------------------------------------------#
 #------------------------ Support Functions ------------------------#
 
 correctRho <- function(est, total){
@@ -152,7 +147,7 @@ sigma2_Update <- function(logY, log_eta_ij, EM_wgt, AB_Up=FALSE){
   return(Sigma2_Up)
 }
 
-#----------------- Likelihood (No Fixed) ----------------------#
+#----------------- Likelihood (no purity) ----------------------#
 # hin	and hin_jacob are needed for Augmented Lagrangian Minimization 
 # Algorithm for optimization
 # hin: a vector function specifying inequality constraints such that 
@@ -178,7 +173,7 @@ logLik_noPurity <- function(x, logY, Z, sigma2C, sigma2A, EM_wgt){
   return(out)
 }
 
-#----------------- Likelihood (Fixed) ----------------------#
+#----------------- Likelihood (given purity) ----------------------#
 hin_func_givenPurity <- function(x, rho_i0, ...){
   return(c(x-0.005, 1-rho_i0-sum(x)-0.005))
 }
@@ -306,7 +301,7 @@ updatePropn_All <- function(logY, rho_init, tumorPurity, Z, maxIter_prop,
 }
 
 #-------------------------------------------------------------------#
-#                SECTION 3 - EM Weights                             #
+#                            EM Weights                             #
 #-------------------------------------------------------------------#
 
 updateWgts <- function(logY, rho_init, sigma2C, sigma2A, Z, propC){
@@ -386,8 +381,6 @@ PropPlus_Update<- function(Y, rho_0, tumorPurity, givenPurity,
               propC = propC_t1, Iter = j, max_rho_diff = max_rho_diff))
 }
 
-# no weights means no gene-specific weight, 
-# no reference means cell type-specific expression will be estimated
 ICeDT <- function(Y, X, refMat=TRUE, tumorPurity=NULL, borrow4SD=TRUE, 
                   maxIter_prop=100, maxIter_PP=100, rhoConverge=1e-4){
   
@@ -413,12 +406,12 @@ ICeDT <- function(Y, X, refMat=TRUE, tumorPurity=NULL, borrow4SD=TRUE,
     stop("Y and X should be non-negative.")
   }
   
-  if(any(Y < 1e-4){
+  if(any(Y < 1e-4)){
     message("Adding 1e-5 to Y to ensure vallid log transformation.")
     Y = Y + 1e-5
   }
   
-  if(any(X < 1e-4){
+  if(any(X < 1e-4)){
     message("Adding 1e-5 to X to ensure vallid log transformation.")
     X = X + 1e-5
   }
@@ -465,7 +458,7 @@ ICeDT <- function(Y, X, refMat=TRUE, tumorPurity=NULL, borrow4SD=TRUE,
     CT_var = t(apply(X = logX, MARGIN = 1, FUN = varFun,
                      group = cellType))
     
-    if(any(colnames(CT_MU) != sortCT) || any(colnames(CT_var) != sortCT){
+    if(any(colnames(CT_MU) != sortCT) || any(colnames(CT_var) != sortCT)){
       stop("Problems with tapply order!")
     }
     

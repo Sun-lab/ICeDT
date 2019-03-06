@@ -1,6 +1,4 @@
-export(ICeDT_Wgt_suppRef)
-export(ICeDT_noWgt_suppRef)
-export(ICeDT_noWgt_noRef)
+export(ICeDT)
 export(simFunc)
 
 import(alabama)

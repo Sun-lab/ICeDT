@@ -7,10 +7,10 @@ Simulation of gene expression data while allowing aberrant genes.
 Simulate gene expression data of both purified samples and bulk smaples of mixed cell types. 
 }
 \usage{
-simFunc(ns, nG, nrep, nCT, pctAb, meanVar_Rel, abMech = 1)
+simFunc(nS, nG, nrep, nCT, pctAb, meanVar_Rel, abMech = 1)
 }
 \arguments{
-  \item{ns}{
+  \item{nS}{
   number of bulk samples to be simulated. 
 }
   \item{nG}{

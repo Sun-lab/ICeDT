@@ -1,14 +1,13 @@
-\name{ICeDT_noWgt_noRef}
-\alias{ICeDT_noWgt_noRef}
+\name{ICeDT}
+\alias{ICeDT}
 \title{
-ICeD-T Model Fit (No Weights, No Supplied Reference)
+ICeDT Model Fit
 }
 \description{
 This function uses purified, immune reference sample data and mixed expression profiles to estimate the cell type composition of tumor samples. This function can utilize information regarding tumor purity if available.
 }
 \usage{
-ICeDT_noWgt_noRef(Y, X, fixedCT = NULL,
-fixedCT_rho, useRho = FALSE, borrow4SD = TRUE,
+ICeDT(Y, X, refMat=TRUE, tumorPurity=NULL, borrow4SD = TRUE,
 maxIter_prop = 100, maxIter_PP = 100, rhoConverge = 1e-04)
 }
 %- maybe also 'usage' for other objects documented here.
@@ -17,19 +16,13 @@ maxIter_prop = 100, maxIter_PP = 100, rhoConverge = 1e-04)
 A matrix of normalized mixture expression profiles (e.g. FPKM, TPM) of dimensions nG by nS. This matrix contains one row per gene and one column per mixture expression profile.
 }
   \item{X}{
-A matrix of normalized reference sample expression profiles of dimensions nG by nP. This matrix contains one row per gene and one column per purified reference sample of immune cells. This dataset must contain at least two samples of each of the immune cell types one desires to estimate.
+A matrix of observed or estimated cell type-specific gene expression with each row for a gene. If it is the observed gene expression, each column is a purified sample, and there should be at least two samples per cell type. If it is the latter, each column is one cell type. The colnames should be cell types. 
 }
-  \item{cellType}{
-A vector indicating the immune cell identities of the expression profiles contained in X. It must be of length nP and its order must match the order of the columns of X.
+  \item{refMat}{
+Indicate whether X is estimated reference matrix (TRUE) or observed gene expression (FALSE). 
 }
-  \item{fixedCT}{ 
-The cell type poportion information may be known for one of the cell types (e.g., the proportion tumor cells). If fixedCT is a scalar, it should match one of the labels in \code{cellType} to indicate the cell type with known proportons. If fixedCT is NULL, all cell type proportions are estimated and it is assumed all cell types have purified references.
-}
-  \item{fixedCT_rho}{
-Vector of length nS which contains the cell type proportion for fixedCT for each sample. Order must match that given in the columns of Y.
-}
-  \item{useRho}{
-useRho is a boolean variable (TRUE = use fixed cell type proportion information, FALSE = estimate fixed cell type proportion).
+  \item{tumorPurity}{
+A vector of length nS which contains the tumor purity for each sample in \code{Y}. Order must match that given in the columns of \code{Y}.
 }
   \item{borrow4SD}{
 Indicator (TRUE/FALSE) of whether or not to borrow information across cell types in order to estimate the standard deviations in pure reference samples.
