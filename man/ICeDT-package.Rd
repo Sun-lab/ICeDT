@@ -1,20 +1,17 @@
 \name{ICeDT-package}
 \alias{ICeDT-package}
-\alias{ICeDT}
 \docType{package}
 \title{
-ICeD-T
+ICeD-T package
 }
 \description{
-ICeD-T
+Estimate cell type composition in tumor samples. 
 }
 \details{
-
-The DESCRIPTION file:
 The ICeD-T package is designed to estimate cell type composition from tumor samples while allowing for aberrant gene expression behavior within tumor samples. Please see the manuscript referenced below for further details.
 }
 \author{
-Douglas Roy Wilson, Jr.
+Douglas Roy Wilson, Jr., Chong Jin, and Wei Sun
 
 Maintainer: Wei Sun <wsun@fredhutch.org>
 }

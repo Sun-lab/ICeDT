@@ -194,6 +194,41 @@ logLik_Fix <- function(x, logY, rho_i0, Z, sigma2C, sigma2A, EM_wgt){
 
 The only difference between noWgt_noRef and noWgt_suppRef is that the former first estimate sigmature matrix from observed cell type-specific gene expression data. So **remove all the redundant functions and just add an parameter to indicate whether the input is  cell type-specific gene expression or signature matrix**. 
 
+## Compare functions in noWgt_noRef vs. Wgt_suppRef_\*. 
+
+The function names have been updated in the main function, e.g., ```gradFunc_noFix``` becomes ```gradFunc_noPurity```.
+
+1. ```lmInit``` = ```lmInit_Wgt_suppRef```
+
+2. ```sigmaInit``` = ```AbProf_Init_Wgt_suppRef```, except calling function ```sigma2_Update``` or ```HS_Sigma2_Update_Wgt_suppRef```. 
+
+3. ```sigma2_Update``` is not the same as ```HS_Sigma2_Update_Wgt_suppRef``` since the latter using numerical optimzation. Modify ```sigma2_Update``` to accomodate this. 
+
+4. ```HS_ComputeLik_Fix_Wgt_suppRef```, ```HS_GradFunc_Fix_Wgt_suppRef```, ```HS_ComputeLik_noFix_Wgt_suppRef```, and ```HS_ComputeLik_Fix_Wgt_suppRef``` take both sigma2 and var_wgt as their parametrs and multiply them inside the function to generate the actual variance, e.g., ```Sigma2_wgt  = var_wgt*Sigma2```. In the new functions, we simply provide the variance after multiplying weigths, so that they are the same as the cases without weights. 
+
+8. ```updatePropn_Single``` = ```HS_UpdatePropn_Single_Wgt_suppRef```, after we update variance e.g.. 
+
+```{r eval=FALSE}
+    sigma2C_1s = sigma2_Update(logY = logY, log_eta_ij = log_eta_ij, 
+                               EM_wgt = EM_wgt, AB_Up = FALSE, var_wgt=var_wgt)
+    sigma2A_1s = sigma2_Update(logY = logY, log_eta_ij = log_eta_ij,
+                               EM_wgt = EM_wgt, AB_Up = TRUE, var_wgt=var_wgt)
+    
+    if(! is.null(var_wgt)){
+      sigma2C_1 = var_wgt*sigma2C_1s
+      sigma2A_1 = var_wgt*sigma2A_1s
+    }else{
+      sigma2C_1 = sigma2C_1s
+      sigma2A_1 = sigma2A_1s
+    }
+```
+
+9. ```updatePropn_All``` = ```HS_UpdatePropn_All_noWgt_suppRef```, after adding ```var_wgt``` as a parameter.
+
+10. ```updateWgts``` = ```HS2_UpdateWgts_All_noWgt_suppRef```, after adding ```var_wgt``` as a parameter, and update sigma2 if ```!is.null(var_wgt)```.
+
+11. ```PropPlus_Update``` = ```PropPlus_Update_noWgt_suppRef```, after adding ```var_wgt``` as a parameter. 
+
 ## To be fixed.
 
 1. function ```alabama/auglag``` gives warning message when choosing parameters outside the constraints, for example, setting rho to be larger than 1.  

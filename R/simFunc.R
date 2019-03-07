@@ -185,6 +185,10 @@ simFunc <- function(nS, nG, nrep, nCT, pctAb, meanVar_Rel, abMech=1){
   #--------------------------------------------#
   # STEP 4  : RETURN VALUES                    #
   #--------------------------------------------#
+  
+  colnames(X) = paste0("CT", cellType)
+  colnames(X)[which(colnames(X) == "CT1")] = "tumor"
+  
   outList = list()
   outList$MGene_Exp    = Y
   outList$PGene_Exp    = X

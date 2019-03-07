@@ -8,5 +8,5 @@ Maintainer: Wei Sun <wsun@fredhutch.org>
 Description: Immune cell composition estimation in tumor samples accounting for aberrant gene expression.
 Depends: alabama, gtools
 License: GPL (>= 2)
-Packaged: 2019-03-05 08:38:25 UTC; wsun
+Packaged: 2019-03-06 17:52:37 UTC; wsun
 NeedsCompilation: no
