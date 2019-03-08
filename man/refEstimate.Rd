@@ -27,6 +27,24 @@ A list
 \item{ctMu }{ expected gene expression (in log scale) for each gene (row) and each cell type (column). }
 \item{ctVar }{ variance of gene expression (in log scale) for each gene (row) and each cell type (column), after borrowing information across cell types if \code{borrow4SD} is TRUE. }
 }
+\examples{
+set.seed(666)
+data(mean_var_relation)
+simData = simFunc(nS=135, nG=250, nrep=5, nCT=5, pctAb=20,
+                  meanVar_Rel=mean_var_relation)
+X = simData$PGene_Exp
+dim(X)
+X[1:2,1:7]
+X = X[,which(colnames(X) != "tumor")]
+
+refE = refEstimate(X)
+names(refE)
+
+refE$refMat[1:2,]
+refE$refVar[1:2,]
+refE$ctMu[1:2,]
+refE$ctVar[1:2,]
+}
 \author{
 Wei Sun, Douglas Wilson
 }

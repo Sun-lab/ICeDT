@@ -8,7 +8,7 @@ Estimate cell type composition of tumor samples using gene expression data of bu
 }
 \usage{
 ICeDT(Y, Z, tumorPurity = NULL, refVar = NULL, rhoInit = NULL, 
-maxIter_prop = 100, maxIter_PP = 100, rhoConverge = 1e-04)
+maxIter_prop = 100, maxIter_PP = 100, rhoConverge = 1e-03)
 }
 \arguments{
   \item{Y}{

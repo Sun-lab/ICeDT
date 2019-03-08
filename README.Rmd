@@ -1,0 +1,78 @@
+---
+title: "ICeDT: Immune Cell Deconvolution in Tumor tissues"
+author: "Wei Sun"
+date: "3/7/2019"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Introduction
+
+This workfolow demonstrate the usage of ICeDT and also evaluate its performance using a simulated dataset. 
+
+```{r library}
+library(ICeDT)
+dimX <- function(v){ if(is.null(dim(v))){r=length(v)} else{r=dim(v)}; r }
+```
+
+## Simulate gene expressoin data 
+
+We simulate the expression of 250 genes from 135 bulk tumor samples as well as purified samples for 5 cell types, with 5 replicates per cell type. 
+
+```{r simulate_data}
+set.seed(666)
+data(mean_var_relation)
+simData = simFunc(nS=135, nG=250, nrep=5, nCT=5, pctAb=20,
+                  meanVar_Rel=mean_var_relation)
+names(simData)
+lapply(simData, dimX)
+simData$tumor_purity[1:5]
+simData$PGene_Exp[1:2,1:7]
+```
+
+## Estimate signature matrix
+
+A sigmature matrix refers to a matrix of expected cell type specific expression for a set of genes across several cell types. These genes are usually selected due to their cell type-specific expression pattern. 
+
+We have simulated gene expression of tumor as well as four other cell types. However, in practice, we do not know the expression from tumor samples. Thus we only use the expression of non-tumor cell types when estimating signature matirx. 
+
+```{r estimate_signatures}
+X = simData$PGene_Exp
+dim(X)
+X[1:2,1:7]
+X = X[,which(colnames(X) != "tumor")]
+
+refE = refEstimate(X)
+lapply(refE, dimX)
+
+refE$refMat[1:2,]
+refE$refVar[1:2,]
+refE$ctMu[1:2,]
+refE$ctVar[1:2,]
+```
+
+```refVar``` is cell type-specific variance estiamte without borrowing information across cell types, while ```ctVar``` is the estimates after borrowing information across cell types. They have strong correlation. 
+```{r check_var}
+cor(c(refE$refVar), c(refE$ctVar))
+```
+
+## cell type composition estimation
+
+```{r iced-t}
+Y = simData$MGene_Exp
+Z = refE$refMat
+
+ice1 = ICeDT(Y = Y, Z = Z, tumorPurity = NULL, refVar = NULL)
+lapply(ice1, dimX)
+
+plot(simData$rho, ice1$rho, xlab="true rho", ylab="estimated rho")
+abline(0,1)
+```
+
+## Session information
+```{r}
+sessionInfo()
+```

@@ -45,6 +45,15 @@ A list of the following elements
 \item{rho }{ matrix of nS x nCT: cell type proportions. }
 \item{tumor_purity }{ Vector of length nS containing the tumor purities for each subject. Order matches columns in MGene_Exp. }
 }
+\examples{
+set.seed(666)
+data(mean_var_relation)
+simData = simFunc(nS=135, nG=250, nrep=5, nCT=5, pctAb=20,
+                  meanVar_Rel=mean_var_relation)
+names(simData)
+simData$tumor_purity[1:5]
+simData$PGene_Exp[1:2,1:7]
+}
 \references{
 Wilson, Douglas R; Jin, Chong; Ibrahim, Joseph G.; Sun, Wei "ICED-T Provides Accurate Estimates of Immune Cell Abundance in Tumor Samples by Allowing for Aberrant Gene Expression Patterns" <<In Review>>, 2018.
 }

@@ -22,15 +22,15 @@ lmInit<-function(yr, Z){
   initMod = lm(y~Z)
   
   rho  = coef(initMod)[-1]
-  wneg = which(rho<0.01)
-  rho[wneg] = 0.01
+  wneg = which(rho < 0.005)
+  rho[wneg] = 0.05
   rho = (rho/sum(rho))*(1-rho_t)
   
   return(rho)
 }
 
 #-------------------------------------------------------------------#
-#  initial estimate of variance for consistent or abberant genes                                      #
+#  initial estimate of variance for consistent or abberant genes
 #-------------------------------------------------------------------#
 
 sigmaInit <- function(x, Z, nG, var_wgt){
@@ -422,7 +422,15 @@ PropPlus_Update<- function(Y, rho_0, tumorPurity, givenPurity,
     
     if(max_rho_diff < rhoConverge){ break }
     
-    message("Current PropPlus Iter ",j,": Max Diff of ",max(max_rho_diff))
+    if(j %% 10 == 1){
+      message("Iter ",j,": max diff of rho: ",max(max_rho_diff))
+    }else{
+      if(j %% 10 == 0){
+        message(".", appendLF = TRUE)
+      }else{
+        message(".", appendLF = FALSE)
+      }
+    }
   }
   
   return(list(rho = rho_t1, sigma2C = sigma2C_t1, sigma2A = sigma2A_t1, 
@@ -512,7 +520,7 @@ refEstimate <- function(X, borrow4SD=TRUE){
 #-----------------------------------------------------#
 
 ICeDT <- function(Y, Z, tumorPurity=NULL, refVar=NULL, rhoInit=NULL, 
-                  maxIter_prop=100, maxIter_PP=100, rhoConverge=1e-4){
+                  maxIter_prop=100, maxIter_PP=100, rhoConverge=1e-3){
   
   #-----------------------------------------------------#
   # Check Input                                         #
@@ -627,7 +635,11 @@ ICeDT <- function(Y, Z, tumorPurity=NULL, refVar=NULL, rhoInit=NULL,
   if(is.null(rhoInit)){
     rho_0 = apply(X = rbind(tumorPurity,Y), MARGIN=2, FUN=lmInit, Z=Z)
   }else{
-    rho_0 = rhoInit
+    if(givenPurity){
+      rho_0 = t(t(rhoInit)/colSums(rhoInit) * (1 - tumorPurity))
+    }else{
+      rho_0 = rhoInit
+    }
   }
 
   # estimate residual variance for consistent/aberrant genes
@@ -661,14 +673,14 @@ ICeDT <- function(Y, Z, tumorPurity=NULL, refVar=NULL, rhoInit=NULL,
   #-----------------------------------------------------#
   
   if(givenPurity){
-    rho_final  = cbind(tumorPurity, t(rho_1))
+    rho_final  = rbind(tumorPurity, rho_1)
   } else {
     tumorPurity_est = 1 - colSums(rho_1)
-    rho_final  = cbind(tumorPurity_est, t(rho_1))
+    rho_final  = rbind(tumorPurity_est, rho_1)
   }
   
-  colnames(rho_final) = c("tumor", colnames(Z))
-  rownames(rho_final) = colnames(Y)
+  rownames(rho_final) = c("tumor", colnames(Z))
+  colnames(rho_final) = colnames(Y)
   
   w2switch = which(sigma2C_1 > sigma2A_1)
   if(length(w2switch) > 0){
