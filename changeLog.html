@@ -127,8 +127,8 @@ $(document).ready(function () {
 <div id="icedt" class="section level1">
 <h1>ICeDT</h1>
 <p>Immune Cell Deconvolution in Tumor tissues</p>
-<div id="update-for-version-0.99.1-2019-0225-to-0306" class="section level2">
-<h2>Update for version 0.99.1, 2019 02/25 to 03/06</h2>
+<div id="update-for-version-0.99.1-2019-0225-to-0307" class="section level2">
+<h2>Update for version 0.99.1, 2019 02/25 to 03/07</h2>
 <div id="nomenclature" class="section level3">
 <h3>Nomenclature</h3>
 <ul>
@@ -298,10 +298,39 @@ $(document).ready(function () {
 </ol>
 <p>The only difference between noWgt_noRef and noWgt_suppRef is that the former first estimate sigmature matrix from observed cell type-specific gene expression data. So <strong>remove all the redundant functions and just add an parameter to indicate whether the input is cell type-specific gene expression or signature matrix</strong>.</p>
 </div>
+<div id="compare-functions-in-nowgt_noref-vs.wgt_suppref_." class="section level2">
+<h2>Compare functions in noWgt_noRef vs. Wgt_suppRef_*.</h2>
+<p>The function names have been updated in the main function, e.g., <code>gradFunc_noFix</code> becomes <code>gradFunc_noPurity</code>.</p>
+<ol style="list-style-type: decimal">
+<li><p><code>lmInit</code> = <code>lmInit_Wgt_suppRef</code></p></li>
+<li><p><code>sigmaInit</code> = <code>AbProf_Init_Wgt_suppRef</code>, except calling function <code>sigma2_Update</code> or <code>HS_Sigma2_Update_Wgt_suppRef</code>.</p></li>
+<li><p><code>sigma2_Update</code> is not the same as <code>HS_Sigma2_Update_Wgt_suppRef</code> since the latter using numerical optimzation. Modify <code>sigma2_Update</code> to accomodate this.</p></li>
+<li><p><code>HS_ComputeLik_Fix_Wgt_suppRef</code>, <code>HS_GradFunc_Fix_Wgt_suppRef</code>, <code>HS_ComputeLik_noFix_Wgt_suppRef</code>, and <code>HS_ComputeLik_Fix_Wgt_suppRef</code> take both sigma2 and var_wgt as their parametrs and multiply them inside the function to generate the actual variance, e.g., <code>Sigma2_wgt  = var_wgt*Sigma2</code>. In the new functions, we simply provide the variance after multiplying weigths, so that they are the same as the cases without weights.</p></li>
+<li><p><code>updatePropn_Single</code> = <code>HS_UpdatePropn_Single_Wgt_suppRef</code>, after we update variance e.g..</p></li>
+</ol>
+<pre class="r"><code>    sigma2C_1s = sigma2_Update(logY = logY, log_eta_ij = log_eta_ij, 
+                               EM_wgt = EM_wgt, AB_Up = FALSE, var_wgt=var_wgt)
+    sigma2A_1s = sigma2_Update(logY = logY, log_eta_ij = log_eta_ij,
+                               EM_wgt = EM_wgt, AB_Up = TRUE, var_wgt=var_wgt)
+    
+    if(! is.null(var_wgt)){
+      sigma2C_1 = var_wgt*sigma2C_1s
+      sigma2A_1 = var_wgt*sigma2A_1s
+    }else{
+      sigma2C_1 = sigma2C_1s
+      sigma2A_1 = sigma2A_1s
+    }</code></pre>
+<ol start="9" style="list-style-type: decimal">
+<li><p><code>updatePropn_All</code> = <code>HS_UpdatePropn_All_noWgt_suppRef</code>, after adding <code>var_wgt</code> as a parameter.</p></li>
+<li><p><code>updateWgts</code> = <code>HS2_UpdateWgts_All_noWgt_suppRef</code>, after adding <code>var_wgt</code> as a parameter, and update sigma2 if <code>!is.null(var_wgt)</code>.</p></li>
+<li><p><code>PropPlus_Update</code> = <code>PropPlus_Update_noWgt_suppRef</code>, after adding <code>var_wgt</code> as a parameter.</p></li>
+</ol>
+</div>
 <div id="to-be-fixed." class="section level2">
 <h2>To be fixed.</h2>
 <ol style="list-style-type: decimal">
-<li>function <code>alabama/auglag</code> gives warning message when choosing parameters outside the constraints, for example, setting rho to be larger than 1.</li>
+<li><p>function <code>alabama/auglag</code> gives warning message when choosing parameters outside the constraints, for example, setting rho to be larger than 1.</p></li>
+<li><p>now the convergence criterion is that all samples converge. This is not necessary since the computation is independent across samples.</p></li>
 </ol>
 </div>
 </div>

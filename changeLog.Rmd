@@ -1,12 +1,12 @@
 ---
 output:
-  html_document: default
   pdf_document: default
+  html_document: default
 ---
 # ICeDT
 Immune Cell Deconvolution in Tumor tissues
 
-## Update for version 0.99.1, 2019 02/25 to 03/06
+## Update for version 0.99.1, 2019 02/25 to 03/07
 
 ### Nomenclature
 
@@ -231,6 +231,8 @@ The function names have been updated in the main function, e.g., ```gradFunc_noF
 
 ## To be fixed.
 
-1. function ```alabama/auglag``` gives warning message when choosing parameters outside the constraints, for example, setting rho to be larger than 1.  
+1. function ```alabama/auglag``` gives warning message when choosing parameters outside the constraints, for example, setting rho to be larger than 1. 
+
+2. now the convergence criterion is that all samples converge. This is not necessary since the computation is independent across samples. 
 
 
