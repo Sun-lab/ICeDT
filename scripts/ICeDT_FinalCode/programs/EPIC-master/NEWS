@@ -1,0 +1,71 @@
+Version 1.1.2
+------------------------------------------------------------------------
+* Updates in the documentation to include the reference to EPIC paper that has
+  now been published in eLife.
+
+Version 1.1.1
+------------------------------------------------------------------------
+* Small updates in README and vignette to add contact information for
+  commercial licenses.
+
+Version 1.1.0
+------------------------------------------------------------------------
+* Change version number to 1.1.0, corresponding to what was used for EPIC
+  paper.
+
+Version 1.0.6
+------------------------------------------------------------------------
+* Updated EPIC to use the latest reference profiles and updated some default
+  values and tests for the package.
+* Updated the help files accordingly, explaining also the additional advanced
+  options available for EPIC.
+
+Version 1.0.5
+------------------------------------------------------------------------
+* Updated EPIC to remove genes from bulk that have only NA values.
+
+Version 1.0.4
+------------------------------------------------------------------------
+* Changed the name "scaleRefProf" to "scaleExprs" and made this boolean makes
+  that either both bulk data and reference profile are rescaled internally (by
+  default), or that none of them is rescaled.
+* Added the option "constrainedSum" (default is TRUE). When this is FALSE, we
+  release the constrain that the sum of cells with known reference profiles
+  must be smaller than 1. Also if withOtherCells is FALSE and constrainedSum is
+  FALSE, we don't use the constraint during the optimization that the sum of all
+  the cells must also be equal to 1 (note we still rescale afterwards the
+  proportions to have a sum equal to 1 but it isn't done during the
+  optimization).
+
+Version 1.0.3
+------------------------------------------------------------------------
+* Little correction in the code to make we can really do the fits without any
+  refProfiles.var (to give same weight to each gene in the optimization).
+* Addition of the input "withOtherCells" (default to TRUE): when FALSE, we
+  assume the bulk is only composed of the cells with known reference profile
+  and force thus in the optimization a sum of these cells' mRNA proportions
+  to be equal to 1.
+
+Version 1.0.2
+------------------------------------------------------------------------
+* Added another way to compute the minimum in the optimization, based on the
+  ranges from each gene given in the refProfiles.var instead of using simple
+  weights based on these.
+* Added the option scaleRefProf in EPIC (default to TRUE) to re-scale or not
+  the reference gene expression profile based on the gene in common with the
+  bulk sample. We can set it to FALSE if we rescale beforehand the ref profile
+  based on the mRNA / cell value for example.
+
+Version 1.0.1
+------------------------------------------------------------------------
+* Removed the warnings from spearman correlation computations indicating that
+  the p-value isn't exact in the presence of ties.
+* Added mRNA_cell values for T cell subtypes.
+* Added reference profiles including CD4 and CD8 T cells for circulating
+  immune cells and including also CAFs and endothelial cells for tumor
+  infilatring cells.
+
+
+Version 1.0.0
+------------------------------------------------------------------------
+* Public release of EPIC package.

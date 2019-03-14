@@ -458,7 +458,7 @@ refEstimate <- function(X, borrow4SD=TRUE){
   }
 
   if(any(X < 1e-4)){
-    message("Adding 1e-5 to X to ensure vallid log transformation.")
+    message("Adding 1e-5 to X to ensure valid log transformation.")
     X = X + 1e-5
   }
   
@@ -565,12 +565,12 @@ ICeDT <- function(Y, Z, tumorPurity=NULL, refVar=NULL, rhoInit=NULL,
   }
   
   if(any(Y < 1e-4)){
-    message("Adding 1e-5 to Y to ensure vallid log transformation.")
+    message("Adding 1e-5 to Y to ensure valid log transformation.")
     Y = Y + 1e-5
   }
   
   if(any(Z < 1e-4)){
-    message("Adding 1e-5 to Z to ensure vallid log transformation.")
+    message("Adding 1e-5 to Z to ensure valid log transformation.")
     Z = Z + 1e-5
   }
   
