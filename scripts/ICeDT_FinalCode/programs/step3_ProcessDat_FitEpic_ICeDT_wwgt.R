@@ -96,16 +96,24 @@ length(unique(geneInfo$geneId))
 # ------------------------------------------------------------
 # EPIC Genes
 # ------------------------------------------------------------
-FList2 = c("BANK1","CD79A", "CD79B", "FCER2", "FCRL2", "FCRL5", "MS4A1", "PAX5", "POU2AF1", "STAP1", "TCL1A",
-           "ADAM33", "CLDN11", "COL1A1", "COL3A1", "COL14A1", "CRISPLD2", "CXCL14", "DPT", "F3", "FBLN1", "ISLR", "LUM", "MEG3", "MFAP5", "PRELP", "PTGIS", "SFRP2", "SFRP4", "SYNPO2", "TMEM119",
-           "ANKRD55", "DGKA", "FOXP3", "GCNT4", "IL2RA", "MDS2", "RCAN3", "TBC1D4", "TRAT1",
-           "CD8B", "HAUS3", "JAKMIP1","NAA16", "TSPYL1",
-           "CDH5", "CLDN5", "CLEC14A", "CXorf36", "ECSCR", "F2RL3", "FLT1", "FLT4", "GPR4", "GPR182", "KDR", "MMRN1", "MMRN2", "MYCT1", "PTPRB", "RHOJ", "SLCO2A1", "SOX18", "STAB2", "VWF",
-           "APOC1", "C1QC", "CD14", "CD163", "CD300C", "CD300E", "CSF1R", "F13A1", "FPR3", "HAMP", "IL1B", "LILRB4", "MS4A6A", "MSR1", "SIGLEC1", "VSIG4",
-           "CD33", "CD300C", "CD300E", "CECR1", "CLEC6A", "CPVL", "EGR2", "EREG", "MS4A6A", "NAGA", "SLC37A2",
-           "CEACAM3", "CNTNAP3", "CXCR1", "CYP4F3", "FFAR2", "HIST1H2BC", "HIST1H3D", "KY", "MMP25", "PGLYRP1", "SLC12A1", "TAS2R40",
-           "CD160", "CLIC3", "FGFBP2", "GNLY", "GNPTAB", "KLRF1", "NCR1", "NMUR1", "S1PR5", "SH2D1B",
-           "BCL11B", "CD5", "CD28", "IL7R", "ITK", "THEMIS", "UBASH3A")
+FList2 = c("BANK1","CD79A", "CD79B", "FCER2", "FCRL2", "FCRL5", "MS4A1", 
+           "PAX5", "POU2AF1", "STAP1", "TCL1A", "ADAM33", "CLDN11", "COL1A1", 
+           "COL3A1", "COL14A1", "CRISPLD2", "CXCL14", "DPT", "F3", "FBLN1", 
+           "ISLR", "LUM", "MEG3", "MFAP5", "PRELP", "PTGIS", "SFRP2", "SFRP4", 
+           "SYNPO2", "TMEM119", "ANKRD55", "DGKA", "FOXP3", "GCNT4", "IL2RA", 
+           "MDS2", "RCAN3", "TBC1D4", "TRAT1", "CD8B", "HAUS3", "JAKMIP1",
+           "NAA16", "TSPYL1", "CDH5", "CLDN5", "CLEC14A", "CXorf36", "ECSCR", 
+           "F2RL3", "FLT1", "FLT4", "GPR4", "GPR182", "KDR", "MMRN1", "MMRN2", 
+           "MYCT1", "PTPRB", "RHOJ", "SLCO2A1", "SOX18", "STAB2", "VWF",
+           "APOC1", "C1QC", "CD14", "CD163", "CD300C", "CD300E", "CSF1R", 
+           "F13A1", "FPR3", "HAMP", "IL1B", "LILRB4", "MS4A6A", "MSR1", 
+           "SIGLEC1", "VSIG4", "CD33", "CD300C", "CD300E", "CECR1", "CLEC6A", 
+           "CPVL", "EGR2", "EREG", "MS4A6A", "NAGA", "SLC37A2",
+           "CEACAM3", "CNTNAP3", "CXCR1", "CYP4F3", "FFAR2", "HIST1H2BC", 
+           "HIST1H3D", "KY", "MMP25", "PGLYRP1", "SLC12A1", "TAS2R40",
+           "CD160", "CLIC3", "FGFBP2", "GNLY", "GNPTAB", "KLRF1", "NCR1", 
+           "NMUR1", "S1PR5", "SH2D1B", "BCL11B", "CD5", "CD28", "IL7R", 
+           "ITK", "THEMIS", "UBASH3A")
 
 FList_tot = FList2
 
@@ -224,7 +232,8 @@ GeneLengths_Mat[1:2,]
 w2rm = which(GeneLengths_Mat$Gencode_ID%in%rows2chk)
 GeneLengths_Mat = GeneLengths_Mat[-c(w2rm),]
 
-mat1 = match(rownames(Exp2use), unlist(lapply(X = strsplit(x = GeneLengths_Mat$Gencode_ID,split ="\\."),'[[',1)))
+mat1 = match(rownames(Exp2use), 
+             unlist(lapply(X = strsplit(x = GeneLengths_Mat$Gencode_ID,split ="\\."),'[[',1)))
 L = GeneLengths_Mat[mat1, "Exonic"]
 TPM = (Exp2use+1)/L
 TPM = (1e6)*t(t(TPM)/colSums(TPM))
@@ -365,10 +374,12 @@ if(Geneset=="Original"&&Weights=="Original"&&rescale==TRUE){
   
   refProfiles = cbind(Bexp,CAFexp,CD4exp,CD8exp,Eexp,Mexp,NKexp)
   refProfiles = refProfiles[Egenes,]
-  colnames(refProfiles) = c("Bcells","CAFs","CD4_Tcells","CD8_Tcells","Endothelial","Macrophages","NKcells")
+  colnames(refProfiles) = c("Bcells","CAFs","CD4_Tcells","CD8_Tcells",
+                            "Endothelial","Macrophages","NKcells")
   
   refVar      = TRef_vprof_r[rownames(bulk),]
-  colnames(refVar) = c("Bcells","CAFs","CD4_Tcells","CD8_Tcells","Endothelial","Macrophages","NKcells")
+  colnames(refVar) = c("Bcells","CAFs","CD4_Tcells","CD8_Tcells","Endothelial",
+                       "Macrophages","NKcells")
   
 } else if(Geneset=="Revised"&&Weights=="Revised"&&rescale==TRUE){
   load("./programs/EPIC-master/data/TRef.rda")
@@ -407,11 +418,13 @@ if(Geneset=="Original"&&Weights=="Original"&&rescale==TRUE){
   
   refProfiles = cbind(Bexp,CAFexp,CD4exp,CD8exp,Eexp,Mexp,NKexp)
   refProfiles = refProfiles[Egenes,]
-  colnames(refProfiles) = c("Bcells","CAFs","CD4_Tcells","CD8_Tcells","Endothelial","Macrophages","NKcells")
+  colnames(refProfiles) = c("Bcells","CAFs","CD4_Tcells","CD8_Tcells",
+                            "Endothelial","Macrophages","NKcells")
   
   refVar      = cbind(Brvar,CAFrvar,CD4rvar,CD8rvar,Ervar,Mrvar,NKrvar)
   refVar      = refVar[Egenes,]
-  colnames(refVar) = c("Bcells","CAFs","CD4_Tcells","CD8_Tcells","Endothelial","Macrophages","NKcells")
+  colnames(refVar) = c("Bcells","CAFs","CD4_Tcells","CD8_Tcells",
+                       "Endothelial","Macrophages","NKcells")
   
 } else if(rescale==FALSE&&Geneset=="Original"){
   load("./programs/EPIC-master/data/TRef.rda")
@@ -654,7 +667,8 @@ q90 <- function(v){
   qs[2] - qs[1]
 }
 
-pdf(sprintf("./figures/probConsistent_GS%s_weights%s_rescale%s.pdf",Geneset,Weights,rescale), width=9, height=3)
+pdf(sprintf("./figures/probConsistent_GS%s_weights%s_rescale%s.pdf",Geneset,Weights,rescale), 
+    width=9, height=3)
 par(mar=c(5,4,1,1), bty="n", mfrow=c(1,3), cex=0.8)
 plot(pmax(density(c(p0))$y, density(c(p1))$y), main="", xlim=c(0,1),
      xlab="probability consistent", ylab="density", type="n")
@@ -679,8 +693,10 @@ predicted_bulk_w0 = refProfiles %*% fitw0$rho[-1,]
 p0_cutoffs = quantile(p0, c(0.333,0.666))
 p1_cutoffs = quantile(p1, c(0.333,0.666))
 
-cat(sprintf("Consistent probability cutoffs for model w/o weight: %.3f, %.3f \n", p0_cutoffs[1], p0_cutoffs[2]))
-cat(sprintf("Consistent probability cutoffs for model w/ weight: %.3f, %.3f \n", p1_cutoffs[1], p1_cutoffs[2]))
+cat(sprintf("Consistent probability cutoffs for model w/o weight: %.3f, %.3f \n", 
+            p0_cutoffs[1], p0_cutoffs[2]))
+cat(sprintf("Consistent probability cutoffs for model w/ weight: %.3f, %.3f \n", 
+            p1_cutoffs[1], p1_cutoffs[2]))
 
 # Revised + Revised + rescaled=TRUE:
 # Consistent probability cutoffs for model w/o weight: 0.558, 0.680 
@@ -689,7 +705,8 @@ cat(sprintf("Consistent probability cutoffs for model w/ weight: %.3f, %.3f \n",
 # Consistent probability cutoffs for model w/o weight: 0.509, 0.549 
 # Consistent probability cutoffs for model w/ weight: 0.512, 0.538 
 
-pdf(sprintf("./figures/scatterplotConsistent_GS%s_weights%s_rescale%s.pdf",Geneset,Weights,rescale), width=9, height=6)
+pdf(sprintf("./figures/scatterplotConsistent_GS%s_weights%s_rescale%s.pdf", 
+            Geneset,Weights,rescale), width=9, height=6)
 par(mar=c(5,4,1,1), bty="n", mfrow=c(2,3), cex=0.8)
 
 plot_log1p = function(x, y, ...) {
@@ -701,7 +718,8 @@ plot_log1p = function(x, y, ...) {
 plot_log1p(c(predicted_bulk_nw)[p0 < p0_cutoffs[1]], c(bulk)[p0 < p0_cutoffs[1]],
      xlab="Predicted gene expression", ylab="Observed gene expression",
      sub="model w/o weight", main="low prob of being consistent")
-plot_log1p(c(predicted_bulk_nw)[p0 >= p0_cutoffs[1] & p0 <= p0_cutoffs[2]], c(bulk)[p0 >= p0_cutoffs[1] & p0 <= p0_cutoffs[2]], 
+plot_log1p(c(predicted_bulk_nw)[p0 >= p0_cutoffs[1] & p0 <= p0_cutoffs[2]], 
+           c(bulk)[p0 >= p0_cutoffs[1] & p0 <= p0_cutoffs[2]], 
      xlab="Predicted gene expression", ylab="Observed gene expression",
      sub="model w/o weight", main="med prob of being consistent")
 plot_log1p(c(predicted_bulk_nw)[p0 > p0_cutoffs[2]], c(bulk)[p0 > p0_cutoffs[2]], 
@@ -711,7 +729,8 @@ plot_log1p(c(predicted_bulk_nw)[p0 > p0_cutoffs[2]], c(bulk)[p0 > p0_cutoffs[2]]
 plot_log1p(c(predicted_bulk_w0)[p1 < p1_cutoffs[1]], c(bulk)[p1 < p1_cutoffs[1]], 
      xlab="Predicted gene expression", ylab="Observed gene expression",
      sub="model w/ weight", main="low prob of being consistent")
-plot_log1p(c(predicted_bulk_w0)[p1 >= p1_cutoffs[1] & p1 <= p1_cutoffs[2]], c(bulk)[p1 >= p1_cutoffs[1] & p1 <= p1_cutoffs[2]], 
+plot_log1p(c(predicted_bulk_w0)[p1 >= p1_cutoffs[1] & p1 <= p1_cutoffs[2]], 
+           c(bulk)[p1 >= p1_cutoffs[1] & p1 <= p1_cutoffs[2]], 
      xlab="Predicted gene expression", ylab="Observed gene expression",
      sub="model w/ weight", main="med prob of being consistent")
 plot_log1p(c(predicted_bulk_w0)[p1 > p1_cutoffs[2]], c(bulk)[p1 > p1_cutoffs[2]], 
