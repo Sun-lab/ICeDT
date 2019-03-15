@@ -679,15 +679,15 @@ predicted_bulk_w0 = refProfiles %*% fitw0$rho[-1,]
 p0_cutoffs = quantile(p0, c(0.333,0.666))
 p1_cutoffs = quantile(p1, c(0.333,0.666))
 
-cat(sprintf("Abberant probability cutoffs for model w/o weight: %.3f, %.3f \n", p0_cutoffs[1], p0_cutoffs[2]))
-cat(sprintf("Abberant probability cutoffs for model w/ weight: %.3f, %.3f \n", p1_cutoffs[1], p1_cutoffs[2]))
+cat(sprintf("Consistent probability cutoffs for model w/o weight: %.3f, %.3f \n", p0_cutoffs[1], p0_cutoffs[2]))
+cat(sprintf("Consistent probability cutoffs for model w/ weight: %.3f, %.3f \n", p1_cutoffs[1], p1_cutoffs[2]))
 
 # Revised + Revised + rescaled=TRUE:
-# Abberant probability cutoffs for model w/o weight: 0.558, 0.680 
-# Abberant probability cutoffs for model w/ weight: 0.946, 0.983
+# Consistent probability cutoffs for model w/o weight: 0.558, 0.680 
+# Consistent probability cutoffs for model w/ weight: 0.946, 0.983
 # Original + Revised + rescaled=TRUE:
-# Abberant probability cutoffs for model w/o weight: 0.509, 0.549 
-# Abberant probability cutoffs for model w/ weight: 0.512, 0.538 
+# Consistent probability cutoffs for model w/o weight: 0.509, 0.549 
+# Consistent probability cutoffs for model w/ weight: 0.512, 0.538 
 
 pdf(sprintf("./figures/scatterplotConsistent_GS%s_weights%s_rescale%s.pdf",Geneset,Weights,rescale), width=9, height=6)
 par(mar=c(5,4,1,1), bty="n", mfrow=c(2,3), cex=0.8)
