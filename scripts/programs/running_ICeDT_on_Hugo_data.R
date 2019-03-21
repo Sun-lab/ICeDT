@@ -176,10 +176,9 @@ table(rownames(X) %in% geneInfo$hgnc_symbol)
 rownames(X)[!rownames(X) %in% geneInfo$hgnc_symbol]
 
 #-------------------------------------------------------------------#
-#|||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||#
 #                SECTION 4 - MERGING DATASETS                       #
-#|||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||#
 #-------------------------------------------------------------------#
+
 ### Remove .XX from ENSG00000000003.XX to make consisent with Linsley
 counts_rn = unlist(lapply(strsplit(x = rownames(counts),split="\\."),
                           '[[',1))
@@ -237,9 +236,7 @@ table(is.na(geneInfo$hgnc_symbol))
 length(unique(geneInfo$hgnc_symbol))
 
 #-------------------------------------------------------------------#
-#|||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||#
 #                SECTION 5 - Reducing Unlabeled Genes               #
-#|||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||#
 #-------------------------------------------------------------------#
 t1 = table(geneInfo$hgnc_symbol)
 sort(t1, decreasing=TRUE)[1:5]
@@ -262,9 +259,7 @@ dim(geneInfo)
 all(rownames(TPM)==geneInfo$ensembl_gene_id)
 
 #-------------------------------------------------------------------#
-#|||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||#
 #                SECTION 5 - GeneSet and Weights                    #
-#|||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||#
 #-------------------------------------------------------------------#
 ### Run Epic and use EPIC_Extract.R
 MixDat_tot = TPM
@@ -387,17 +382,17 @@ if(Geneset=="Original"){
 }
 
 #-------------------------------------------------------------------#
-#|||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||#
 #                SECTION 5 - Run Data                               #
-#|||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||#
 #-------------------------------------------------------------------#
 
 # Using ICeDT package
 fitnw = ICeDT::ICeDT(Y=bulk, Z=refProfiles, tumorPurity=NULL, refVar=NULL,
-                     rhoInit=NULL, maxIter_prop = 500, maxIter_PP = 250, rhoConverge = 1e-3)
+                     rhoInit=NULL, maxIter_prop = 500, maxIter_PP = 250, 
+                     rhoConverge = 1e-3)
 
 fitw0 = ICeDT::ICeDT(Y=bulk, Z=refProfiles, tumorPurity=NULL, refVar=refVar,
-                     rhoInit=NULL, maxIter_prop = 500, maxIter_PP = 250, rhoConverge = 1e-3)
+                     rhoInit=NULL, maxIter_prop = 500, maxIter_PP = 250, 
+                     rhoConverge = 1e-3)
 
 save(fitnw,fitw0,file=sprintf("./data/ICeDT_ExpandedFits_GeneSet%s.RData",Geneset))
 save(EPIC_Bref, EPIC_Tref, file="./data/EPIC_Fits.RData")
@@ -405,9 +400,7 @@ save(EPIC_Bref, EPIC_Tref, file="./data/EPIC_Fits.RData")
 load(sprintf("./data/ICeDT_ExpandedFits_GeneSet%s.RData",Geneset))
 
 #-------------------------------------------------------------------#
-#|||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||#
 #                SECTION 6 - PROCESS OUTPUT                         #
-#|||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||#
 #-------------------------------------------------------------------#
 pinfo = read.table("./data/patient_info.txt", sep="\t", as.is=TRUE, 
                    header=TRUE)
@@ -424,9 +417,7 @@ table(rownames(EPIC_Tref$cellFractions) == pinfo$SRA.tumor.RNA)
 table(pinfo$irRECIST)
 
 #-------------------------------------------------------------------#
-#|||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||#
 #                SECTION 7 - PLOTTING RESULTS                       #
-#|||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||#
 #-------------------------------------------------------------------#
 figures_dir = sprintf("./figures/GeneSet%s/",Geneset)
 dir.create(figures_dir, recursive = TRUE)
@@ -582,9 +573,7 @@ jonckheere.test(x=renorm_EPIC[,4],g = disCat_num,alternative = "decreasing")
 jonckheere.test(x=renorm_CSORT[,4],g = disCat_num,alternative = "decreasing")
 
 #-------------------------------------------------------------------#
-#|||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||#
 #                SECTION 8 - CHECK ABBERANT PROBABILITY             #
-#|||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||#
 #-------------------------------------------------------------------#
 
 p0 = fitnw$cProb
