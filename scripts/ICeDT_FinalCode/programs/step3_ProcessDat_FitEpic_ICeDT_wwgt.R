@@ -20,12 +20,10 @@
 #####################################################################
 
 #-------------------------------------------------------------------#
-#|||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||#
 #                SECTION 0 - RUN PARAMETERS                         #
-#|||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||#
 #-------------------------------------------------------------------#
 # Geneset = {Revised, Original}
-#     - Revised = EPIC Genes, LM22 Genes, MCP-Counter genes
+#     - Revised  = EPIC Genes, LM22 Genes, MCP-Counter genes
 #     - Original = EPIC utilized genes
 # Weights = {Revised, Original}
 #     - Revised  = Rescale the data and recompute variance
@@ -41,10 +39,9 @@ Weights = "Revised"
 rescale = TRUE
 
 #-------------------------------------------------------------------#
-#|||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||#
 #                SECTION 1 - LIBRARIES and CODE                     #
-#|||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||#
 #-------------------------------------------------------------------#
+
 library(nnls)
 library(quantreg)
 library(hqreg)
@@ -56,13 +53,8 @@ library(clinfun)
 library(ICeDT)
 
 #-------------------------------------------------------------------#
-#|||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||#
 #                SECTION 2 - READ-IN PROVIDED DATA                  #
-#|||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||#
 #-------------------------------------------------------------------#
-#### Set Up File Directory ####
-# setwd("D://DougData/Documents/Dissertation/Paper 3 - Immune Cell Deconv/")
-# setwd("./Sun_Requested_Analysis/DrSun_GrantFigures/")
 
 # -----------------------------------------------------------------
 # OBTAIN LM22 Genes
@@ -96,6 +88,7 @@ length(unique(geneInfo$geneId))
 # ------------------------------------------------------------
 # EPIC Genes
 # ------------------------------------------------------------
+
 FList2 = c("BANK1","CD79A", "CD79B", "FCER2", "FCRL2", "FCRL5", "MS4A1", 
            "PAX5", "POU2AF1", "STAP1", "TCL1A", "ADAM33", "CLDN11", "COL1A1", 
            "COL3A1", "COL14A1", "CRISPLD2", "CXCL14", "DPT", "F3", "FBLN1", 
@@ -120,6 +113,7 @@ FList_tot = FList2
 # ------------------------------------------------------------
 # load gene expression data parsed from Hugo et al. 2016
 # ------------------------------------------------------------
+
 load("./data/FPKM_and_counts_filtered.RData")
 ls()
 
@@ -426,7 +420,7 @@ if(Geneset=="Original"&&Weights=="Original"&&rescale==TRUE){
   colnames(refVar) = c("Bcells","CAFs","CD4_Tcells","CD8_Tcells",
                        "Endothelial","Macrophages","NKcells")
   
-} else if(rescale==FALSE&&Geneset=="Original"){
+} else if(rescale==FALSE && Geneset=="Original"){
   load("./programs/EPIC-master/data/TRef.rda")
   
   Egenes = TRef$sigGenes
@@ -438,7 +432,7 @@ if(Geneset=="Original"&&Weights=="Original"&&rescale==TRUE){
   refProfiles = TRef_eprof_r[Egenes,]
   refVar      = TRef_vprof_r[Egenes,]
   
-} else if(rescale==FALSE&&Geneset=="Revised"){
+} else if(rescale==FALSE && Geneset=="Revised"){
   Egenes = union(FList_tot,rownames(X))
   
   commonGenes = intersect(rownames(Bdat_r),rownames(MixDat_tot))
@@ -742,3 +736,6 @@ dev.off()
 
 setwd("./programs")
 sessionInfo()
+
+q(save="no")
+
