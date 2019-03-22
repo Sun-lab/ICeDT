@@ -529,9 +529,11 @@ renorm_CSORT = CSORT_Full_LM22[,1:22]
 renorm_CSORT = t(t(renorm_CSORT)/CSORT_CTSize)
 renorm_CSORT = renorm_CSORT/rowSums(renorm_CSORT)
 
+par(mar=c(10,4,1,1), bty="n", las=2)
+
 pdf("./figures/CIBERSORT_CD8_vs_response.pdf", width=4, height=4)
-boxplot(renorm_CSORT[,4] ~ pinfo$irRECIST, ylab="CD8+ T cell proportion", outline=FALSE, 
-        ylim=c(0, max(renorm_CSORT[,4])))
+boxplot(renorm_CSORT[,4] ~ pinfo$irRECIST, ylab="CD8+ T cell proportion", 
+        outline=FALSE, ylim=c(0, max(renorm_CSORT[,4])))
 set.seed(1234)
 stripchart(renorm_CSORT[,4] ~ pinfo$irRECIST, method="jitter", jitter = 0.2, 
            vertical=TRUE, add=TRUE, pch=20, col="darkred")
@@ -547,8 +549,8 @@ renorm_CSORT_TRef = t(t(renorm_CSORT_TRef)/c(0.40,0.40,0.40,0.40,0.40,1.42,0.43)
 renorm_CSORT_TRef = renorm_CSORT_TRef/rowSums(renorm_CSORT_TRef)
 
 pdf("./figures/CIBERSORT_TRef_CD8_vs_response.pdf", width=4, height=4)
-boxplot(renorm_CSORT_TRef[,4] ~ pinfo$irRECIST, ylab="CD8+ T cell proportion", outline=FALSE, 
-        ylim=c(0, max(renorm_CSORT_TRef[,4])))
+boxplot(renorm_CSORT_TRef[,4] ~ pinfo$irRECIST, ylab="CD8+ T cell proportion", 
+        outline=FALSE, ylim=c(0, max(renorm_CSORT_TRef[,4])))
 set.seed(1234)
 stripchart(renorm_CSORT_TRef[,4] ~ pinfo$irRECIST, method="jitter", jitter = 0.2, 
            vertical=TRUE, add=TRUE, pch=20, col="darkred")
