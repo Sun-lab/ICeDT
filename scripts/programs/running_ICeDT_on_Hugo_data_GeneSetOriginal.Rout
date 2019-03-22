@@ -975,6 +975,8 @@ null device
 > renorm_CSORT = t(t(renorm_CSORT)/CSORT_CTSize)
 > renorm_CSORT = renorm_CSORT/rowSums(renorm_CSORT)
 > 
+> par(mar=c(10,4,1,1), bty="n", las=2)
+> 
 > pdf("./figures/CIBERSORT_CD8_vs_response.pdf", width=4, height=4)
 > par(mar=c(10,4,1,1), bty="n", las=2)
 > boxplot(renorm_CSORT[,4] ~ pinfo$irRECIST, ylab="CD8+ T cell proportion", outline=FALSE, 
@@ -983,8 +985,8 @@ null device
 > stripchart(renorm_CSORT[,4] ~ pinfo$irRECIST, method="jitter", jitter = 0.2, 
 +            vertical=TRUE, add=TRUE, pch=20, col="darkred")
 > dev.off()
-null device 
-          1 
+pdf 
+  2 
 > 
 > ### Using the TRef Data
 > CSORT_Full_TRef = read.table(file = "./data/CIBERSORT.Output_SunMelExt_TRefNQNorm.csv",
@@ -1003,8 +1005,8 @@ null device
 > stripchart(renorm_CSORT_TRef[,4] ~ pinfo$irRECIST, method="jitter", jitter = 0.2, 
 +            vertical=TRUE, add=TRUE, pch=20, col="darkred")
 > dev.off()
-null device 
-          1 
+pdf 
+  2 
 > 
 > 
 > #-------------------------------------------------------------------#
@@ -1103,8 +1105,8 @@ alternative hypothesis: decreasing
 +      xlab="median prob. consistent", ylab="90 percentile - 10 percentile")
 > 
 > dev.off()
-null device 
-          1 
+pdf 
+  2 
 > 
 > # Scatterplot of predicted vs. observed gene expression
 > dim(fitw0$rho[-1,])
@@ -1166,8 +1168,8 @@ Consistent probability cutoffs for model w/ weight: 0.512, 0.538
 +      sub="model w/ weight", main="high prob of being consistent")
 > 
 > dev.off()
-null device 
-          1 
+pdf 
+  2 
 > 
 > 
 > setwd("./programs")
@@ -1205,4 +1207,4 @@ loaded via a namespace (and not attached):
 > q(save="no")
 > proc.time()
    user  system elapsed 
-113.896   3.952 118.379 
+115.889   4.373 120.895 

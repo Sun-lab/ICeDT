@@ -506,6 +506,8 @@ renorm_CSORT = CSORT_Full_LM22[,1:22]
 renorm_CSORT = t(t(renorm_CSORT)/CSORT_CTSize)
 renorm_CSORT = renorm_CSORT/rowSums(renorm_CSORT)
 
+par(mar=c(10,4,1,1), bty="n", las=2)
+
 pdf("./figures/CIBERSORT_CD8_vs_response.pdf", width=4, height=4)
 par(mar=c(10,4,1,1), bty="n", las=2)
 boxplot(renorm_CSORT[,4] ~ pinfo$irRECIST, ylab="CD8+ T cell proportion", outline=FALSE, 

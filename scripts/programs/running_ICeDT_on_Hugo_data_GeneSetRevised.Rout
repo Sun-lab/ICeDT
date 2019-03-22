@@ -970,15 +970,18 @@ null device
 > renorm_CSORT = t(t(renorm_CSORT)/CSORT_CTSize)
 > renorm_CSORT = renorm_CSORT/rowSums(renorm_CSORT)
 > 
+> par(mar=c(10,4,1,1), bty="n", las=2)
+> 
 > pdf("./figures/CIBERSORT_CD8_vs_response.pdf", width=4, height=4)
+> par(mar=c(10,4,1,1), bty="n", las=2)
 > boxplot(renorm_CSORT[,4] ~ pinfo$irRECIST, ylab="CD8+ T cell proportion", outline=FALSE, 
 +         ylim=c(0, max(renorm_CSORT[,4])))
 > set.seed(1234)
 > stripchart(renorm_CSORT[,4] ~ pinfo$irRECIST, method="jitter", jitter = 0.2, 
 +            vertical=TRUE, add=TRUE, pch=20, col="darkred")
 > dev.off()
-null device 
-          1 
+pdf 
+  2 
 > 
 > ### Using the TRef Data
 > CSORT_Full_TRef = read.table(file = "./data/CIBERSORT.Output_SunMelExt_TRefNQNorm.csv",
@@ -990,14 +993,15 @@ null device
 > renorm_CSORT_TRef = renorm_CSORT_TRef/rowSums(renorm_CSORT_TRef)
 > 
 > pdf("./figures/CIBERSORT_TRef_CD8_vs_response.pdf", width=4, height=4)
+> par(mar=c(10,4,1,1), bty="n", las=2)
 > boxplot(renorm_CSORT_TRef[,4] ~ pinfo$irRECIST, ylab="CD8+ T cell proportion", outline=FALSE, 
 +         ylim=c(0, max(renorm_CSORT_TRef[,4])))
 > set.seed(1234)
 > stripchart(renorm_CSORT_TRef[,4] ~ pinfo$irRECIST, method="jitter", jitter = 0.2, 
 +            vertical=TRUE, add=TRUE, pch=20, col="darkred")
 > dev.off()
-null device 
-          1 
+pdf 
+  2 
 > 
 > 
 > #-------------------------------------------------------------------#
@@ -1096,8 +1100,8 @@ alternative hypothesis: decreasing
 +      xlab="median prob. consistent", ylab="90 percentile - 10 percentile")
 > 
 > dev.off()
-null device 
-          1 
+pdf 
+  2 
 > 
 > # Scatterplot of predicted vs. observed gene expression
 > dim(fitw0$rho[-1,])
@@ -1129,7 +1133,7 @@ Consistent probability cutoffs for model w/ weight: 0.946, 0.983
 +             Geneset), width=9, height=6)
 > par(mar=c(5,4,1,1), bty="n", mfrow=c(2,3), cex=0.8)
 > 
-> # plot observed vs. expected expression, stratified by 3-quantiles:
+> # plot observed vs. expected expression, stratified by 3-quantiles
 > plot_log1p = function(x, y, ...) {
 +   smoothScatter(log(x+1e-5), log(y+1e-5), xlim=c(-5, 10), ylim=c(-5, 10), ...)
 +   legend("bottomright", bty="n",
@@ -1159,8 +1163,8 @@ Consistent probability cutoffs for model w/ weight: 0.946, 0.983
 +      sub="model w/ weight", main="high prob of being consistent")
 > 
 > dev.off()
-null device 
-          1 
+pdf 
+  2 
 > 
 > 
 > setwd("./programs")
@@ -1198,4 +1202,4 @@ loaded via a namespace (and not attached):
 > q(save="no")
 > proc.time()
    user  system elapsed 
-298.058  13.365 312.200 
+298.998  14.662 314.340 
