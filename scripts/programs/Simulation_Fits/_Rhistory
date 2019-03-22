@@ -1,0 +1,512 @@
+}
+})
+}
+#----------------------------------------------------#
+# If optimType = "nlminb" and there is an error, revert
+# to the less sophisticated BFGS and give that a whirl.
+if(class(TroubleInd)=="try-error"){
+#--- Initialized ---#
+cdata[["mix"]][["p.est"]] = matrix(test.init,nrow=1,ncol=length(cellTypes))
+cdata[["mix"]][["tau.est"]] = cdata[["beta.est"]][1,]/colSums(cdata[["beta.est"]])
+cdata[["mix"]][["gamma.est"]] = t(t(cdata[["alpha.est"]])/colSums(cdata[["alpha.est"]]))[-c(cdata$I),]/cdata$l_tilde[-cdata$I]
+cdata[["mix"]][["pm.rds.exons"]] = matrix(0,nrow=(cdata$E),ncol=length(cellTypes))
+TroubleInd<-try(
+while(any(p.conv,t.conv,g.conv)){
+#--------------------------------------------------#
+# STEP 1 (E-Step): UPDATE the Posterior Means      #
+#--------------------------------------------------#
+cdata[["mix"]][["pm.rds.exons"]] = compute.pmeans(X_fin = cdata$X.fin,
+mix_list = cdata[["mix"]])
+#--------------------------------------------------#
+# STEP 2.A (M-Step): UPDATE tau and proportions    #
+#--------------------------------------------------#
+tmp.tp.out = lab_fit_update_v2(cdata = cdata,
+nk = length(cellTypes))
+#--------------------------------------------------#
+# STEP 2.B (M-Step): UPDATE the Gamma values       #
+#--------------------------------------------------#
+alphas.prev.rds = rbind(cdata[["alpha.est"]],
+cdata[["mix"]][["gamma.est"]],
+cdata[["mix"]][["pm.rds.exons"]])
+new.gamma = apply(X = alphas.prev.rds,MARGIN = 2,FUN = update.iso.STG2,
+X.fin = cdata$X.fin, X.prime = cdata$X.prime,
+I = cdata$I, l_tilde = cdata$l_tilde,optimType = "NM")
+#--------------------------------------------------#
+# CHECK Convergence of the Values / STORE          #
+#--------------------------------------------------#
+#----- Inflation Factors --------------------------#
+# Computing % change causes problems if p and tau have zero entries
+# Best to add inflation factor to control for this problem.
+# P threshold chosen since this gets into the 0.001%
+# In mixture sample. We don't much care about that.
+# Tau threshold chosen since at this level we would
+# average less than 1 read per 10,000,000 total reads
+# in the cluster. Seems a sufficiently small bump. 1
+# read is approximately zero in my book because of error.
+t.inflation = 1e-8
+#----- Convergence Computations -------------------#
+new.p = c(tmp.tp.out$p.est,1-sum(tmp.tp.out$p.est))
+p.diff = max(abs(new.p-cdata[["mix"]]$p.est))
+cdata[["mix"]][["p.est"]] = matrix(c(tmp.tp.out[["p.est"]],1-sum(tmp.tp.out[["p.est"]])),nrow=1,ncol=length(cellTypes))
+p.conv = (p.diff>p.co)
+tau.diff = max(abs(tmp.tp.out$t.est-cdata[["mix"]]$tau.est))
+cdata[["mix"]][["tau.est"]] = tmp.tp.out[["t.est"]]
+t.conv = (tau.diff>t.co)
+gamma.diff = max(abs(cdata[["mix"]][["gamma.est"]]-new.gamma)*cdata$l_tilde[-cdata$I])
+cdata[["mix"]][["gamma.est"]] = new.gamma
+g.conv = (gamma.diff>g.co)
+iter.co = sum(iter.co,1)
+if(iter.co>iter.cut){
+warn.clust = 1
+break
+}
+})
+}
+#----------------------------------------------------#
+# STORE the output                                   #
+#----------------------------------------------------#
+cdata[["CellType_Order"]] = cellTypes
+if(class(TroubleInd)=="try-error"){
+cdata[["WARN"]] = 4
+} else {
+cdata[["WARN"]] = warn.clust
+}
+return(cdata)
+}
+#------------------------------------------------------#
+# WARNING INDICATORS                                   #
+#------------------------------------------------------#
+# 0 - Optimization Complete
+# 1 - Iteration Limit Reached
+# 4 - Error in Optimization Routine
+# 5 - Optimization not conducted (Error in pure sample fit)
+STG.Update_Cluster.All<-function(all_data,cellTypes,optimType="nlminb",simple.Init,initPts){
+tmp.out = lapply(X = all_data,FUN = STG.Update_Cluster.SingMI,cellTypes= cellTypes,
+p.co = 1e-7,t.co=1e-8,g.co=1e-7,optimType=optimType,iter.co=15000,
+simple.Init=simple.Init, initPts = initPts)
+return(tmp.out)
+}
+#-----------------------------------------------------------------------#
+# SUMMARIZING the Output                                                #
+#-----------------------------------------------------------------------#
+# Compile the estimates from each cluster, provide a histogram,
+# and summarize the values with a geometric median.
+histogram_func<-function(vec){
+mtitle = sprintf("Distribution of Estimated Proportions of (%s)",vec[1])
+xlabel= sprintf("Prop. of (%s)",vec[1])
+hist(x = as.numeric(vec[-1]),main = mtitle,xlab = xlabel)
+}
+Summarize_Report<-function(cdata,restrict,clusters=NULL){
+#--------------------------------------------------------------#
+# CODING for restrictions                                      #
+#--------------------------------------------------------------#
+if(length(clusters)>0){
+if(restrict==0 && length(clusters)>0){
+warn("Set Restrict to no, but specified clusters for restriction.\n")
+warn("Will restrict to provided clusters.\n")
+}
+cdata_fin = cdata[clusters]
+} else {
+cdata_fin = cdata
+}
+#--------------------------------------------------------------#
+# EXTRACT cell-types info                                      #
+#--------------------------------------------------------------#
+cto = cdata_fin[[1]][["CellType_Order"]]
+nclust = length(cdata_fin)
+p_mat = matrix(0,nrow = nclust,ncol = length(cto))
+colnames(p_mat) = cto
+for(i in 1:nclust){
+p_mat[i,] = cdata_fin[[i]][["mix"]][["p.est"]]
+}
+#--------------------------------------------------------------#
+# PLOTTING the cell type info                                  #
+#--------------------------------------------------------------#
+df = as.data.frame(x = t(p_mat))
+names_vec = paste("clust",1:nclust,"est",sep = ".")
+colnames(df) = names_vec
+df$cellType = cto
+df = df[c("cellType",names_vec)]
+apply(X = df,MARGIN = 1,FUN = histogram_func)
+#---------------------------------------------------------------#
+# Summarizing the Values                                        #
+#---------------------------------------------------------------#
+fin_est = matrix(0,nrow=1,ncol=length(cto))
+colnames(fin_est) = cto
+p.fin = spatial.median(X = p_mat[,-length(cto)])
+fin_est[1,] = c(p.fin,1-sum(p.fin))
+#----------------------------------------------------------------#
+# RETURN values                                                  #
+#----------------------------------------------------------------#
+return(list(p.est = fin_est,p.mat = p_mat))
+}
+#-------------------------------------------------------------------#
+# PROGRAM LIST                                                      #
+#-------------------------------------------------------------------#
+# (1) STG.Update_Cluster.All -
+#     [I.1] all_data    = List item with one element per gene
+#               - $CTA       - Pure Data information regarding CTA
+#               - $CTB       - Pure Data information regarding CTB
+#               - $alpha.est - hyperparams governing gene expression
+#               - $beta.est  - hyperparams governing iso expression
+#               - $mix       - Mixture Data information
+#                 - $rds_exons_t  - Vector of length E+1 containing reads in mixture
+#                 - $gamma.est    - Vector of length I containing iso estimates
+#                 - $tau.est      - parameter of length 1 containing gene estimates
+#                 - $p.est        - vector of length K containing estimated proportions
+#                 - $pm.rds.exons - Matrix of size ExK containing posterior means
+#     [I.2] cellTypes   = vector containing names of cell types used to label
+#                         data in the all_data object
+#     [I.3] optimType   = nlminb, BFGS, BFGSWB, NM
+#     [I.4] simple.Init = TRUE/FALSE whether to use a pre-initialize procedure
+#     [I.5] initPts     = a vector (or matrix) of initial points to use for
+#                         the optimization routine.
+#
+#     Description : Calls to update functions for each element of all_data
+#                   Returns list item (1 element per gene), containing relevant
+#                   estimates in $mix
+#
+#########################
+# (2) STG.Update_Cluster.SingMI
+#     [I.1] cdata       = List item of length 1 containing 1 element of all_data
+#                         ($CTA,$CTB,$mix,pure estimates)
+#     [I.2] cellTypes   = vector containing cell type labels used to index all_data
+#     [I.3] x.co        = Convergence cutoffs for props, taus (gene), gammas (iso)
+#     [I.4] optimType   = nlminb, BFGS, BFGSWB, NM
+#     [I.5] iter.co     = number of iterations allowed
+#     [I.6] simple.Init = (TRUE/FALSE) using simple init to decide which initial value
+#                         to use
+#     [I.7] initPts     = A vector (or matrix) containing a list of start points for K-1 cell types
+#
+#     Description : Implements single fit several times across different startpoints to ensure the
+#                   best fit possible for our optimization technique.
+#
+#########################
+# (3) applyMI
+#       [I.1] x         = a vector of length K containing the start point for the procedure
+#       [I.2] cdata     = a single element of the all_data object
+#       [I.3] cellTypes = a vector containing the cell type labels used to index cdata
+#       [I.4] x.co      = Convergence cutoffs for props, taus (genes), gammas (isos)
+#       [I.5] optimType = nlminb, BFGS, BFGSWB, NM
+#       [I.6] iter.cut  = Iteration cutoff for the EM algorithm
+#
+#       Description: This programs applies the initial fit across the grid. This fit
+#                    could be simplified so that we estimate an initial likelihood using
+#                    initial gene and isoform expressions and certain proportions.
+#
+#########################
+# (4) STG.Update_Cluster.Single
+#       [I.1] cdata     = Single element of all_data to be optimized
+#       [I.2] cellTypes = vector containing cell type labels used to index cdata
+#       [I.3] x.co      = Convergence criteria for props, taus (gene), and isos (gamma)
+#       [I.4] optimType = nlminb, BFGS, BFGSWB, NM
+#       [I.5] test.init = a vector of length K containing the starting point of the procedure
+#       [I.6] iter.cut  = the maximum number of iterations allowed
+#
+#       Description: Constructs and outputs results from a single gene fitting. Also provides
+#                    a warning indicator with the following output codes
+#                    $ WARN
+#                       0 - Optimization Complete
+#                       1 - Iteration Limit Reached
+#                       4 - Error in Optimization Routine
+#                       5 - Optimization not conducted (Error in pure sample fit)
+#
+#########################
+# (5) lab_fit_update_v2
+#         [I.1] cdata   = data from a single element of all_data
+#         [I.2] nk      = a single value specifying the number of cell types
+#
+#         Description: Performs a single iteration's update of the tau and proportion
+#                      estimates returns a list object with $t.est and $p.est
+#
+#########################
+# (6) update.iso.STG2
+#          [I.1] X.fin   = Edited design matrix for new gamma parameters (X_i-[l_i/l_I]X_I,...,X_I/l_I)
+#          [I.2] X.prime = First (I-1) columns of X.fin pertaining to gamma parameters
+#          [I.3] I       = Number of Isoforms used by the considered gene
+#          [I.4] l_tilde = Total effective length for an isoform
+#          [I.5] alphas.prev.rds = vector of length (2*I-1+E) containing
+#                                  {1:I}           Alpha hyperparameters
+#                                  {(I+1):(2*I-1)} previous gamma estimates
+#                                  {(2*I):(END)}   posterior mean reads for the optimized cell type
+#          [I.6] optimType = nlminb, BFGS, BFGSWB, NM
+#
+#          Description: Performs the isoform update procedure for a single cell type, single iteration.
+#
+#########################
+testingOutput = STG.Update_Cluster.All(all_data = tmp.data,cellTypes = c("CTA","CTB"),optimType = "BFGSWB",simple.Init = TRUE,initPts = c(0.01,0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9,0.99))
+testingOutput[[2]]$mix$p.est
+testingOutput[[1]]$mix$p.est
+testingOutput[[3]]$mix$p.est
+test2 = STG.Update_Cluster.Single(cdata = tmp.data[[2]],cellTypes = c("CTA","CTB"),p.co = 1e-4,t.co = 1e-7,g.co = 1e-4,optimType = "BFGSWB",test.init = c(0.5,0.5),iter.cut = 15000)
+test2$mix$p.est
+test2 = STG.Update_Cluster.Single(cdata = tmp.data[[2]],cellTypes = c("CTA","CTB"),p.co = 1e-4,t.co = 1e-7,g.co = 1e-4,optimType = "BFGSWB",test.init = c(0.2,0.8),iter.cut = 15000)
+test2$mix$p.est
+test2 = STG.Update_Cluster.Single(cdata = tmp.data[[2]],cellTypes = c("CTA","CTB"),p.co = 1e-4,t.co = 1e-7,g.co = 1e-4,optimType = "BFGSWB",test.init = c(0.3,0.7),iter.cut = 15000)
+test2$mix$p.est
+test2 = STG.Update_Cluster.Single(cdata = tmp.data[[2]],cellTypes = c("CTA","CTB"),p.co = 1e-4,t.co = 1e-7,g.co = 1e-4,optimType = "BFGSWB",test.init = c(0.1,.9),iter.cut = 15000)
+test2$mix$p.est
+test2 = STG.Update_Cluster.Single(cdata = tmp.data[[2]],cellTypes = c("CTA","CTB"),p.co = 1e-4,t.co = 1e-7,g.co = 1e-4,optimType = "BFGSWB",test.init = c(0.7,.3),iter.cut = 15000)
+test2$mix$p.est
+test2 = STG.Update_Cluster.Single(cdata = tmp.data[[2]],cellTypes = c("CTA","CTB"),p.co = 1e-4,t.co = 1e-7,g.co = 1e-4,optimType = "BFGSWB",test.init = c(0.8,.2),iter.cut = 15000)
+test2$mix$p.est
+test2 = STG.Update_Cluster.Single(cdata = tmp.data[[2]],cellTypes = c("CTA","CTB"),p.co = 1e-4,t.co = 1e-7,g.co = 1e-4,optimType = "BFGSWB",test.init = c(0.9,.1),iter.cut = 15000)
+test2$mix$p.est
+test2 = STG.Update_Cluster.Single(cdata = tmp.data[[2]],cellTypes = c("CTA","CTB"),p.co = 1e-4,t.co = 1e-7,g.co = 1e-4,optimType = "BFGSWB",test.init = c(0.8,.2),iter.cut = 15000)
+debug(STG.Update_Cluster.Single)
+test2 = STG.Update_Cluster.Single(cdata = tmp.data[[2]],cellTypes = c("CTA","CTB"),p.co = 1e-4,t.co = 1e-7,g.co = 1e-4,optimType = "BFGSWB",test.init = c(0.8,.2),iter.cut = 15000)
+p.conv
+g.conv
+t.conv
+test2 = STG.Update_Cluster.Single(cdata = tmp.data[[2]],cellTypes = c("CTA","CTB"),p.co = 1e-4,t.co = 1e-7,g.co = 1e-4,optimType = "BFGSWB",test.init = c(0.8,.2),iter.cut = 15000)
+new.p
+test.init
+tmp.tp.out
+new.gamma
+dim(cdata$X)
+names(cdata)
+cdata[["mix"]][["iso.true.A"]]
+cdata[["mix"]]
+tmp.tp.out
+test2 = STG.Update_Cluster.Single(cdata = tmp.data[[2]],cellTypes = c("CTA","CTB"),p.co = 1e-4,t.co = 1e-7,g.co = 1e-4,optimType = "BFGSWB",test.init = c(0.8,.2),iter.cut = 15000)
+cdata[["mix"]][["tau.est"]]
+cdata[["beta.est"]]
+(9.197218e01)/(9.197281e01+8.263235e6)
+cdata[["CTA"]]
+names(cdata[["CTA"]])
+names(cdata[["CTA"]][["tau.true"]])
+cdata[["CTA"]][["tau.true"]]
+mean(cdata[["CTA"]][["tau.true"]][1,])
+cdata[["beta.est"]]
+(7.787857e01)/(7.787857e01+6.755523e06)
+mean(cdata[["CTB"]][["tau.true"]][1,])
+mean(cdata[["CTA"]][["tau.true"]][1,])
+(1.10e-5)*10000000
+(1.13e-5)*10000000
+new.gamma
+new.gamma*cdata[["l_tilde"]][-cdata$I]
+cdata[["beta.est"]]
+cdata[["alpha.est"]]
+cdata[["alpha.true"]]
+cdata[["CTA"]]
+cdata[["CTA"]][["iso.est"]]
+names(cdata[["CTA"]])
+cdata[["CTA"]][["gamma.hat"]]
+cdata[["CTA"]][["gamma.hat"]]*cdata$l_tilde[-cdata$I]
+cor(c(cdata[["CTA"]][["gamma.hat"]]*cdata$l_tilde[-cdata$I]),c(cdata[["CTA"]][["iso.true"]][-cdata$I,](cdata$l_tilde[-cdata$I]))
+)
+cor(c(cdata[["CTA"]][["gamma.hat"]]*cdata$l_tilde[-cdata$I]),c(cdata[["CTA"]][["iso.true"]][-cdata$I,]*cdata$l_tilde[-cdata$I]))
+cor(c(cdata[["CTB"]][["gamma.hat"]]*cdata$l_tilde[-cdata$I]),c(cdata[["CTB"]][["iso.true"]][-cdata$I,]*cdata$l_tilde[-cdata$I]))
+library(gtools)
+rdirichlet(3,alpha = c(3,2,1))
+rdirichlet(3,alpha = c(3,2,1,3,2,1))
+rowSums(rdirichlet(3,alpha=c(3,2,1,3,2,1)))
+rowSums(rdirichlet(10,alpha=c(3,2,1,3,2,1)))
+rdirichlet(10,alpha=c(3,2,1,3,2,1))
+1/.4
+(2.5+18+12+16+15+2)
+18/65.5
+12/65.6
+12/65.5
+debug(EPIC)
+library(EPIC)
+debug(EPIC)
+#-------------------------------------------------------------------#
+#|||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||#
+#                SECTION 2 - DATA PROCESS                           #
+#|||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||#
+#-------------------------------------------------------------------#
+useLM22 = FALSE
+UseCorr = FALSE
+#-------------------------------------------------------------------#
+# LOAD DATA                                                         #
+#-------------------------------------------------------------------#
+load("D://DougData/Documents/Dissertation/Paper 3 - Immune Cell Deconv/RealData/RealAnalysis/New RNA-Seq Data/Simulations_RealDataGuided/data/MixedTumors_4_Analaysis.RData")
+load("D://DougData/Documents/Dissertation/Paper 3 - Immune Cell Deconv/RealData/RealAnalysis/New RNA-Seq Data/Simulations_RealDataGuided/data/ReferenceConstruct4Sim_Renorm.RData")
+load("D://DougData/Documents/Dissertation/Paper 3 - Immune Cell Deconv/RealData/RealAnalysis/New RNA-Seq Data/Simulations_RealDataGuided/data/TumorPurity_Dat_Renorm.RData")
+ucts = unique(sunFPKM_UQ_purect)
+ucts = ucts[-which(ucts=="whole blood")]
+CT_MU  = CT_MU[,-which(colnames(CT_MU)=="whole blood")]
+CT_VAR = CT_VAR[,-which(colnames(CT_VAR)=="whole blood")]
+#---- Remove the whole blood samples from contention
+wWholeBlood       = which(sunFPKM_UQ_purect=="whole blood")
+if(useLM22){
+sunFPKM_UQ_pure   = sunFPKM_UQ_pure[rownames(CT_MU),-c(wWholeBlood)]
+sunFPKM_UQ_purect = sunFPKM_UQ_purect[-c(wWholeBlood)]
+sunFPKM_UQ_mix    = sunFPKM_UQ_mix[rownames(CT_MU),]
+} else {
+sunFPKM_UQ_pure   = sunFPKM_UQ_pure[,-c(wWholeBlood)]
+sunFPKM_UQ_purect = sunFPKM_UQ_purect[-c(wWholeBlood)]
+}
+#------------ APPLICATION --------------#
+# Run the first part of the Code_Calls.R code from any of the realdatasim folders
+# This will give me the necessary data
+# First, do not allow inclusion of tumor cell type.
+MixDat = 1000*exp(sunFPKM_UQ_mix)
+PurDat = 1000*exp(sunFPKM_UQ_pure)
+#### Exam 2: Correlated Genes
+CorrelatedGenes = TumorCorr_GeneList(MixDat = MixDat,Rhos = Tumor_Pur_Mix,PCutOff = 0.15)
+if(UseCorr){
+FList = CorrelatedGenes$GeneList
+} else {
+FList = rownames(PurDat)
+}
+#-------------------------------------------------------------------#
+#|||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||#
+#                   SECTION 3 - MODEL FITTING                       #
+#|||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||#
+#-------------------------------------------------------------------#
+PurDat_Use = PurDat[FList,]
+MixDat_Use = MixDat[FList,]
+cellType   = sunFPKM_UQ_purect
+# After check, it appears that the tumor purities and expression matrix
+# are matched. THus:
+names(Tumor_Pur_Mix) = colnames(MixDat_Use)
+#-------------------------------------------------------------------#
+#|||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||#
+#                SECTION 4 - Fitting EPIC Model                     #
+#|||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||#
+#-------------------------------------------------------------------#
+### Epic with our normalization scheme and their matrix
+EPIC_out_BRef = EPIC(MixDat_Use,reference = "BRef",scaleExprs = TRUE)
+summary(refProfiles)
+summary(log(refProfiles))
+0,0002*((0.124+0.45+0.25)/(0.001+0.0012+0.0014))
+0.0002*((0.124+0.45+0.25)/(0.001+0.0012+0.0014))
+325000000*0.008
+325000000*0.0085
+#####################################################################
+# Constrained Proportions - Full Simulation for Model 2             #
+#####################################################################
+# PROGRAM NAME:                                                     #
+#   CP_FullSim_Test.R                                               #
+# PROGRAMMER:                                                       #
+#   Douglas Roy Wilson, Jr.                                         #
+# DATE CREATED:                                                     #
+#   06/19/2017                                                      #
+# LAST EDIT:                                                        #
+#   06/19/2017                                                      #
+# VERSION:                                                          #
+#   R-3.3.2                                                         #
+#-------------------------------------------------------------------#
+# DESCRIPTION:                                                      #
+#   The Code to step through the simulation. Dear, sweet Lord, let  #
+#   this program work and work well!                                #
+#####################################################################
+#-------------------------------------------------------------------#
+# LIBRARY and CODE CALLS                                            #
+#-------------------------------------------------------------------#
+library(alabama)
+library(gtools)
+library(MASS)
+library(VGAM)
+library(ggplot2)
+library(cowplot)
+setwd("D://DougData/Documents/Dissertation/Paper 3 - Immune Cell Deconv/")
+setwd("./Sun_Requested_Analysis/DrSun_GrantFigures/programs/")
+source("./Full Model - Versions 4+5 with Diff EM Weights/Simulation_Machinery.R")
+load("./Full Model - Versions 4+5 with Diff EM Weights/Simulation_Machinery.RData")
+#-------------------------------------------------------------------#
+# Call Simulation Function                                          #
+#-------------------------------------------------------------------#
+# Aberrance Mechanism 1: Randomly Select genes to down/up-regulate.
+#1101 is original seed
+#set.seed(73956)
+PctAb = 20
+nrep = 15
+borrow4sd = FALSE
+useRho = TRUE
+if(PctAb==30){
+set.seed(1101)
+}
+if(PctAb==20){
+set.seed(39103)
+}
+if(PctAb==0){
+set.seed(58021)
+}
+SimData = ICeD_SimFunc(ns=135,nG=250,nrep=nrep,nCell=5,PctAb=PctAb,AbMech=1,meanVar_Rel = testing)
+fileNm = sprintf("./HS_FullSim_Test_1EN3PA%s_nrep%s.RData",PctAb,nrep)
+load(fileNm)
+d
+#-------------------------------------------------------------------#
+# LOAD RESULTS                                                      #
+#-------------------------------------------------------------------#
+setwd("D://DougData/Documents/Dissertation/Paper 3 - Immune Cell Deconv/")
+setwd("./Sun_Requested_Analysis/DrSun_GrantFigures/programs/Simulation_Fits/")
+fileNm = sprintf("./HS_FullSim_Test_1EN3PA%s_nrep%s.RData",PctAb,nrep)
+load(fileNm)
+# Plots:
+Abplot <- ggplot(data = Ab_Plot_Data,aes(PostProb,fill=Model))+geom_density(alpha=0.2)+
+labs(y="Density",x="Posterior Prob. Consistent",colour="Cell Group")
+nAbPlot <- ggplot(data = C_Plot_Data,aes(PostProb,fill=Model))+geom_density(alpha=0.2)+theme(legend.position="bottom")+
+labs(y="Density",x="Posterior Prob. Consistent",colour="Cell Group")
+PPlot   <- ggplot(data = P_Plot_Data,aes(PropAb,fill=Model))+geom_density(alpha=0.2)+
+labs(y="Density",x="Prop. Consistent Genes (p)",colour="Cell Group")+ylim(0,1)
+lp <- get_legend(nAbPlot)
+MultiPlot = plot_grid(Abplot+theme(legend.position="none"),nAbPlot+theme(legend.position="none"),PPlot+theme(legend.position="none"),NULL,lp,NULL,rel_widths = c(1,1,1),rel_heights = c(1,0.2),
+nrow=2,ncol=3,labels = c("a","b","c","","",""))
+library(cowplot)
+library(ggplot2)
+# Plots:
+Abplot <- ggplot(data = Ab_Plot_Data,aes(PostProb,fill=Model))+geom_density(alpha=0.2)+
+labs(y="Density",x="Posterior Prob. Consistent",colour="Cell Group")
+nAbPlot <- ggplot(data = C_Plot_Data,aes(PostProb,fill=Model))+geom_density(alpha=0.2)+theme(legend.position="bottom")+
+labs(y="Density",x="Posterior Prob. Consistent",colour="Cell Group")
+PPlot   <- ggplot(data = P_Plot_Data,aes(PropAb,fill=Model))+geom_density(alpha=0.2)+
+labs(y="Density",x="Prop. Consistent Genes (p)",colour="Cell Group")+ylim(0,1)
+lp <- get_legend(nAbPlot)
+MultiPlot = plot_grid(Abplot+theme(legend.position="none"),nAbPlot+theme(legend.position="none"),PPlot+theme(legend.position="none"),NULL,lp,NULL,rel_widths = c(1,1,1),rel_heights = c(1,0.2),
+nrow=2,ncol=3,labels = c("a","b","c","","",""))
+summary(Testing_Orig$P_Consistent)
+summary(c(Testing_Orig$PP_Consistent[which(SimData$Aberrant>0),]))
+summary(c(Testing_Orig$PP_Consistent[which(SimData$Aberrant==0),]))
+ICeDT_nw_PPAb  = c(Testing_Orig$PP_Consistent[which(SimData$Aberrant>0),])
+ICeDT_nw_PPnAb = c(Testing_Orig$PP_Consistent[which(SimData$Aberrant==0),])
+# Weights
+summary(Testing$P_Consistent)
+summary(c(Testing$PP_Consistent[which(SimData$Aberrant>0),]))
+summary(c(Testing$PP_Consistent[which(SimData$Aberrant==0),]))
+ICeDT_w0_PPAb  = c(Testing$PP_Consistent[which(SimData$Aberrant>0),])
+ICeDT_w0_PPnAb = c(Testing$PP_Consistent[which(SimData$Aberrant==0),])
+# Posterior Probability (Aberrant):
+Ab_Plot_Data = data.frame(Model=c(rep("ICeD-T (No Weights)",length(ICeDT_nw_PPAb)),
+rep("ICeD-T (Weights)",length(ICeDT_w0_PPAb))),
+PostProb = c(ICeDT_nw_PPAb,ICeDT_w0_PPAb))
+# Posterior Probability (Consistent):
+C_Plot_Data  = data.frame(Model=c(rep("ICeD-T (No Weights)",length(ICeDT_nw_PPnAb)),
+rep("ICeD-T (Weights)",length(ICeDT_w0_PPnAb))),
+PostProb = c(ICeDT_nw_PPnAb,ICeDT_w0_PPnAb))
+# Proportion Aberrant:
+P_Plot_Data  = data.frame(Model=c(rep("ICeD-T (No Weights)",length(Testing_Orig$P_Consistent)),
+rep("ICeD-T (Weights)",length(Testing$P_Consistent))),
+PropAb = c(Testing_Orig$P_Consistent,Testing$P_Consistent))
+# Plots:
+Abplot <- ggplot(data = Ab_Plot_Data,aes(PostProb,fill=Model))+geom_density(alpha=0.2)+
+labs(y="Density",x="Posterior Prob. Consistent",colour="Cell Group")
+nAbPlot <- ggplot(data = C_Plot_Data,aes(PostProb,fill=Model))+geom_density(alpha=0.2)+theme(legend.position="bottom")+
+labs(y="Density",x="Posterior Prob. Consistent",colour="Cell Group")
+PPlot   <- ggplot(data = P_Plot_Data,aes(PropAb,fill=Model))+geom_density(alpha=0.2)+
+labs(y="Density",x="Prop. Consistent Genes (p)",colour="Cell Group")+ylim(0,1)
+lp <- get_legend(nAbPlot)
+MultiPlot = plot_grid(Abplot+theme(legend.position="none"),nAbPlot+theme(legend.position="none"),PPlot+theme(legend.position="none"),NULL,lp,NULL,rel_widths = c(1,1,1),rel_heights = c(1,0.2),
+nrow=2,ncol=3,labels = c("a","b","c","","",""))
+print(MultiPlot)
+Testing$P_Consistent
+summary(Testing$P_Consistent)
+summary(Testing_Orig$P_Consistent)
+# Proportion Aberrant:
+P_Plot_Data  = data.frame(Model=c(rep("ICeD-T (No Weights)",length(Testing_Orig$P_Consistent)),
+rep("ICeD-T (Weights)",length(Testing$P_Consistent))),
+PropAb = c(Testing_Orig$P_Consistent,Testing$P_Consistent))
+aggregate(PropAb~Model,data = P_Plot_Data,FUN = summary)
+PPlot   <- ggplot(data = P_Plot_Data,aes(PropAb,fill=Model))+geom_density(alpha=0.2)+
+labs(y="Density",x="Prop. Consistent Genes (p)",colour="Cell Group")+xlim(0,1)
+lp <- get_legend(nAbPlot)
+MultiPlot = plot_grid(Abplot+theme(legend.position="none"),nAbPlot+theme(legend.position="none"),PPlot+theme(legend.position="none"),NULL,lp,NULL,rel_widths = c(1,1,1),rel_heights = c(1,0.2),
+nrow=2,ncol=3,labels = c("a","b","c","","",""))
+print(MultiPlot)
+fnm = "AberranceFit_Comparison.pdf"
+pdf(file = fnm, height=3.0, width=9.0)
+print(MultiPlot)
+dev.off()

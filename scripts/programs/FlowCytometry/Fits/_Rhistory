@@ -1,0 +1,512 @@
+# etc.
+interval_test <- findInterval(all_events, time_vec_val)
+test_table <- table(all_trts, interval_test)
+for (m in 1:dim(test_table)[1]) {
+for (n in 1:dim(test_table)[2]) {
+if (test_table[m, n] < 2 & flag1 == 0) flag1 <- 1
+}
+}
+# If user defined set of time cutoffs are sufficient use them.
+if (flag1 == 0) new_breaks <- time_vec_val
+# If user defined intervals do not create an assessment table with at least 5 events, then
+# start with a set of cutpoints equal in number to the length of the user defined set, but
+# spaced so that the number of events in each interval are about the same.
+if (flag1 == 1){
+new_breaks <- NULL
+splits <- length(time_vec_val) + 1 #Ensures the number of initial new breaks with equal length(time_vec_val)
+repeat {
+# For present number of cutpoints, identify cutpoints with equal proportions of
+# events within time intervals created by cutpoints.
+temp_breaks <- quantile(all_events, prob = seq(from = 1/splits, to = 1 - 1/splits, by = 1/splits))
+# For all events, find the interval number (interval 1, interval 2, etc.) that
+# contains the event.
+interval_test <- findInterval(all_events, temp_breaks)
+# Create a table of group source (historical controls, randomized controls, or
+# or experimental group) by interval counts.
+test_table <- table(all_trts, interval_test)
+# If each cell in test_table contains at least 5 events, then cut point
+# selection is used to estimate hazard ratio.
+for (m in 1:dim(test_table)[1]) {
+for (n in 1:dim(test_table)[2]) {
+if (test_table[m, n] < 2 & flag1 == 1)
+flag1 <- 0
+}
+}
+# If we only have two intervals, stop.  Note: splits equals the number of intervals not number of cutpoints.
+if (flag1 == 1 | splits == 2) {
+break
+} else {
+splits <- splits - 1
+flag1 <- 1
+}
+}
+new_breaks <- as.vector(temp_breaks)
+}
+# The values in new_breaks create length(new_breaks)+1 time intervals. Each must have a
+# modeled hazard parameter.  Also the last parameter passed to the model fitting routine
+# will be the log hazard ratio.
+# Generate initial values for your call to optim()
+chk_model <- eha::phreg(survival::Surv(event_time, status) ~ treatment, data = sampleranddata, dist = "pch", cuts = new_breaks)
+rc_hazards <- c(chk_model$hazards)
+rand_hr <- exp(chk_model$coefficients)
+init.parms <- as.vector(c(log(rc_hazards), log(rand_hr)))
+# Generate the Bayesian CLT based parameter estimates needed for inference on hazard ratio.
+fitmod <- optim(par = init.parms, fn = pwe_loglike_nohist, time_vec = new_breaks, randdata = sampleranddata, method = "Nelder-Mead",
+hessian = TRUE)
+# Extract model parameters and statistics
+hr_loc <- length(init.parms)
+covar_mat <- solve(fitmod$hessian)
+hazard_ratio <- exp(fitmod$par[hr_loc])
+lower_pwe_hazard_ratio <- exp(fitmod$par[hr_loc] - qnorm(1 - alpha/2) * sqrt(covar_mat[hr_loc, hr_loc]))
+upper_pwe_hazard_ratio <- exp(fitmod$par[hr_loc] + qnorm(1 - alpha/2) * sqrt(covar_mat[hr_loc, hr_loc]))
+# Make a decision about the simulated trial, reject or fail to reject null hypothesis.
+reject <- ifelse(((lower_pwe_hazard_ratio > 1) | (upper_pwe_hazard_ratio < 1)), 1, 0)
+output <- c(hazard_ratio, covar_mat[hr_loc, hr_loc], reject)
+# Return the mean ratio, the estimated variance of the log mean ratio, and the trial decision.
+names(output) <- c("pwe_hazard_ratio", "log_hr_var", "reject")
+return(output)
+}
+# -------------------------------------------------------------------------------------------- #
+#     Simulate some Historic Control Data, to study the case where the user has actual data.
+# -------------------------------------------------------------------------------------------- #
+set.seed(2250)
+nvalHC <- 60
+time.vec <- c(0.3,0.9,1.5,2.1,2.4)
+lambdaHC.vec <- c(0.19,0.35,0.56,0.47,0.38,0.34)
+censor.value <- 3
+SampleHistData <- genpwedata(nvalHC, lambdaHC.vec, 1.0, time.vec, censor.value)
+histdata <- subset(SampleHistData, subset=(treatment==0))
+histdata$indicator <- 2 #If set to 1, then historical controls will be collapsed with
+#randomized controls.  Should historical controls be separated
+#from randomized controls.  Perhaps not.
+histdata$ID <- histdata$id+10000
+ChkModel <- eha::phreg(survival::Surv(event_time, status) ~ 1, data = histdata, dist='pch', cuts=time.vec)
+init.parms <- c(ChkModel$hazards)
+# -------------------------------------------------------------------------------------------- #
+#     Simulation a couple of trials that incorporates historical data.
+# -------------------------------------------------------------------------------------------- #
+set.seed(3445)
+pwetrialsimulator(sample_size_val=100000,
+hist_data = histdata,
+lambda_vec_val = init.parms,
+time_vec_val = time.vec,
+hazard_ratio_val = 0.60,
+censor_value = 3.0,
+a0_val = 1.0,
+alpha = 0.05)
+debug(pwetrialsimulator)
+set.seed(3445)
+pwetrialsimulator(sample_size_val=100000,
+hist_data = histdata,
+lambda_vec_val = init.parms,
+time_vec_val = time.vec,
+hazard_ratio_val = 0.60,
+censor_value = 3.0,
+a0_val = 1.0,
+alpha = 0.05)
+Q
+set.seed(3445)
+pwetrialsimulator(sample_size_val=100000,
+hist_data = histdata,
+lambda_vec_val = init.parms,
+time_vec_val = time.vec,
+hazard_ratio_val = 0.60,
+censor_value = 3.0,
+a0_val = 1.0,
+alpha = 0.05)
+set.seed(3445)
+pwetrialsimulator(sample_size_val=60,
+hist_data = histdata,
+lambda_vec_val = init.parms,
+time_vec_val = time.vec,
+hazard_ratio_val = 0.60,
+censor_value = 3.0,
+a0_val = 1.0,
+alpha = 0.05)
+set.seed(3445)
+pwetrialsimulator(sample_size_val=60,
+hist_data = histdata,
+lambda_vec_val = init.parms,
+time_vec_val = time.vec,
+hazard_ratio_val = 0.60,
+censor_value = 3.0,
+a0_val = 1.0,
+alpha = 0.05)
+interval_test
+flag
+flag1
+test_table
+set.seed(3445)
+pwetrialsimulator(sample_size_val=60,
+hist_data = histdata,
+lambda_vec_val = init.parms,
+time_vec_val = time.vec,
+hazard_ratio_val = 0.60,
+censor_value = 3.0,
+a0_val = 1.0,
+alpha = 0.05)
+test_table
+m
+m
+m
+flag1
+set.seed(3445)
+pwetrialsimulator(sample_size_val=60,
+hist_data = histdata,
+lambda_vec_val = init.parms,
+time_vec_val = time.vec,
+hazard_ratio_val = 0.60,
+censor_value = 3.0,
+a0_val = 1.0,
+alpha = 0.05)
+flag1
+test_table
+22/400
+22/300
+800/6
+8000/60
+5+22+14
+41/300
+5+14+14
+33/100
+sqrt(100*0.05*0.95)
+5+6
+sqrt(100*0.07*0.93)
+7+3*2.55
+5+9+14+22
+50/400
+install.packages("D://DougData/Documents/Dissertation/Paper 2 - eQTL Mapping/Edits_4232018/Revised_Final_Library 2/pTReCASE_1.0.tar.gz",repos=NULL)
+currFile = "D://DougData/Documents/Dissertation/Paper 2 - eQTL Mapping/Revised_Final_Library/Calibration_Out.txt"
+# Change Working Directory on your personal machine
+# setwd()
+data("calibrationData")
+currFile = "./Calibration_Out.txt"
+library(pTReCASE)
+currFile = "D://DougData/Documents/Dissertation/Paper 2 - eQTL Mapping/Revised_Final_Library/Calibration_Out.txt"
+# Change Working Directory on your personal machine
+# setwd()
+data("calibrationData")
+currFile = "./Calibration_Out.txt"
+pTReCASE_multapp(Y = as.matrix(calibrationData$y),
+Y1 = as.matrix(calibrationData$y1),
+Y2 = as.matrix(calibrationData$y2),
+Z = as.matrix(calibrationData$z),
+X = as.matrix(calibrationData$Xs),
+rhos = calibrationData$rhos,
+maxIter = 400,convg=1e-5,
+genot_Info = c(1),gene_start = c(1),
+gene_end = c(1),useASE=1,
+cis_window = 100000,Obs_Score = 1,
+F_out = currFile,Perform_CT_co=0.5)
+pTReCASE_cal = read.table(file = currFile,header = TRUE,sep = "\t",stringsAsFactors = FALSE,fill = TRUE)
+pTReCASE_cal
+pTReCASE_multapp(Y = as.matrix(calibrationData$y),
+Y1 = as.matrix(calibrationData$y1),
+Y2 = as.matrix(calibrationData$y2),
+Z = as.matrix(calibrationData$z),
+X = as.matrix(calibrationData$Xs),
+rhos = calibrationData$rhos,
+maxIter = 400,convg=1e-5,
+genot_Info = c(1),gene_start = c(1),
+gene_end = c(1),useASE=1,
+cis_window = 100000,Obs_Score = 1,
+F_out = currFile,Perform_CT_co=0.5)
+pTReCASE_cal = read.table(file = currFile,header = TRUE,sep = "\t",stringsAsFactors = FALSE,fill = TRUE)
+pTReCASE_cal
+pTReCASE_multapp(Y = as.matrix(calibrationData$y),
+Y1 = as.matrix(calibrationData$y1),
+Y2 = as.matrix(calibrationData$y2),
+Z = as.matrix(calibrationData$z),
+X = as.matrix(calibrationData$Xs),
+rhos = calibrationData$rhos,
+maxIter = 400,convg=1e-5,
+genot_Info = c(1),gene_start = c(1),
+gene_end = c(1),useASE=1,
+cis_window = 100000,Obs_Score = 0,
+F_out = currFile,Perform_CT_co=0.5)
+pTReCASE_cal = read.table(file = currFile,header = TRUE,sep = "\t",stringsAsFactors = FALSE,fill = TRUE)
+pTReCASE_cal
+pchisq(NaN,2,lower.tail = FALS)
+pchisq(NaN,2,lower.tail = FALSE)
+install.packages("D://DougData/Documents/Dissertation/Paper 2 - eQTL Mapping/Edits_4232018/Revised_Final_Library 2/pTReCASE_1.0.tar.gz",repos=NULL)
+library(pTReCASE)
+currFile = "D://DougData/Documents/Dissertation/Paper 2 - eQTL Mapping/Revised_Final_Library/Calibration_Out.txt"
+# Change Working Directory on your personal machine
+# setwd()
+data("calibrationData")
+currFile = "./Calibration_Out.txt"
+pTReCASE_multapp(Y = as.matrix(calibrationData$y),
+Y1 = as.matrix(calibrationData$y1),
+Y2 = as.matrix(calibrationData$y2),
+Z = as.matrix(calibrationData$z),
+X = as.matrix(calibrationData$Xs),
+rhos = calibrationData$rhos,
+maxIter = 400,convg=1e-5,
+genot_Info = c(1),gene_start = c(1),
+gene_end = c(1),useASE=1,
+cis_window = 100000,Obs_Score = 0,
+F_out = currFile,Perform_CT_co=0.5)
+pTReCASE_cal = read.table(file = currFile,header = TRUE,sep = "\t",stringsAsFactors = FALSE,fill = TRUE)
+pTReCASE_cal
+pTReCASE_multapp(Y = as.matrix(calibrationData$y),
+Y1 = as.matrix(calibrationData$y1),
+Y2 = as.matrix(calibrationData$y2),
+Z = as.matrix(calibrationData$z),
+X = as.matrix(calibrationData$Xs),
+rhos = calibrationData$rhos,
+maxIter = 400,convg=1e-5,
+genot_Info = c(1),gene_start = c(1),
+gene_end = c(1),useASE=1,
+cis_window = 100000,Obs_Score = 1,
+F_out = currFile,Perform_CT_co=0.5)
+pTReCASE_cal = read.table(file = currFile,header = TRUE,sep = "\t",stringsAsFactors = FALSE,fill = TRUE)
+pTReCASE_cal
+install.packages("D://DougData/Documents/Dissertation/Paper 2 - eQTL Mapping/Edits_4232018/Revised_Final_Library 2/pTReCASE_1.0.tar.gz",repos=NULL)
+pTReCASE_multapp(Y = as.matrix(calibrationData$y),
+Y1 = as.matrix(calibrationData$y1),
+Y2 = as.matrix(calibrationData$y2),
+Z = as.matrix(calibrationData$z),
+X = as.matrix(calibrationData$Xs),
+rhos = calibrationData$rhos,
+maxIter = 400,convg=1e-5,
+genot_Info = c(1),gene_start = c(1),
+gene_end = c(1),useASE=1,
+cis_window = 100000,Obs_Score = 1,
+F_out = currFile,Perform_CT_co=0.5)
+pTReCASE_cal = read.table(file = currFile,header = TRUE,sep = "\t",stringsAsFactors = FALSE,fill = TRUE)
+library(pTReCASE)
+pTReCASE_multapp(Y = as.matrix(calibrationData$y),
+Y1 = as.matrix(calibrationData$y1),
+Y2 = as.matrix(calibrationData$y2),
+Z = as.matrix(calibrationData$z),
+X = as.matrix(calibrationData$Xs),
+rhos = calibrationData$rhos,
+maxIter = 400,convg=1e-5,
+genot_Info = c(1),gene_start = c(1),
+gene_end = c(1),useASE=1,
+cis_window = 100000,Obs_Score = 1,
+F_out = currFile,Perform_CT_co=0.5)
+pTReCASE_cal = read.table(file = currFile,header = TRUE,sep = "\t",stringsAsFactors = FALSE,fill = TRUE)
+pTReCASE_cal
+pTReCASE_multapp(Y = as.matrix(calibrationData$y),
+Y1 = as.matrix(calibrationData$y1),
+Y2 = as.matrix(calibrationData$y2),
+Z = as.matrix(calibrationData$z),
+X = as.matrix(calibrationData$Xs),
+rhos = calibrationData$rhos,
+maxIter = 400,convg=1e-5,
+genot_Info = c(1),gene_start = c(1),
+gene_end = c(1),useASE=1,
+cis_window = 100000,Obs_Score = 0,
+F_out = currFile,Perform_CT_co=0.5)
+pTReCASE_cal = read.table(file = currFile,header = TRUE,sep = "\t",stringsAsFactors = FALSE,fill = TRUE)
+pTReCASE_cal
+install.packages("D://DougData/Documents/Dissertation/Paper 2 - eQTL Mapping/Edits_4232018/Revised_Final_Library 2/pTReCASE_1.0.tar.gz",repos=NULL)
+lgamma(0.00004)
+(1e-5)*log(1e5)
+library(pTReCASE)
+currFile = "D://DougData/Documents/Dissertation/Paper 2 - eQTL Mapping/Revised_Final_Library/Calibration_Out.txt"
+# Change Working Directory on your personal machine
+# setwd()
+data("calibrationData")
+currFile = "./Calibration_Out.txt"
+pTReCASE_multapp(Y = as.matrix(calibrationData$y),
+Y1 = as.matrix(calibrationData$y1),
+Y2 = as.matrix(calibrationData$y2),
+Z = as.matrix(calibrationData$z),
+X = as.matrix(calibrationData$Xs),
+rhos = calibrationData$rhos,
+maxIter = 400,convg=1e-5,
+genot_Info = c(1),gene_start = c(1),
+gene_end = c(1),useASE=1,
+cis_window = 100000,Obs_Score = 0,
+F_out = currFile,Perform_CT_co=0.5)
+pTReCASE_cal = read.table(file = currFile,header = TRUE,sep = "\t",stringsAsFactors = FALSE,fill = TRUE)
+pTReCASE_cal
+x = 1:10
+x[11]
+xmat = matrix(rnorm(n = 100,mean = 0,sd = 1),nrow=20)
+xmat
+xmat[c(18:NA),]
+xmat[c(18:NaN),]
+60*22
+50*22
+55*22
+1301/80
+1130000*2.3
+1130000*2.3/(60*60)
+721/24
+11300000/1301
+8686*2.3
+8686*2.3/(60*60)
+1214/114
+load("D:/DougData/Documents/Dissertation/Paper 2 - eQTL Mapping/Paper Edits/CN_SNP_Data/All_SigDataRWn_CO5eN4.RData")
+chrTot_Fin[100481,]
+chrTot_Fin[871439,]
+chrTot_Fin[87149,]
+chrTot_Fin[100149,]
+chrTot_Fin[300149,]
+chrTot_Fin[300149,]
+idx = which(chrTot_Fin$P_Gamma<5e-8)
+chr5e8 = chrTot_Fin[idx,]
+View(chr5e8)
+table(chr5e8$Fail_Full)
+table(chr5e8$Fail_Eta)
+table(chr5e8$Fail_Gamma)
+13003
+1300/3
+load("D:/DougData/Documents/Dissertation/Paper 2 - eQTL Mapping/Paper Edits/CN_SNP_Data/All_SigDataRWn_CO5eN4.RData")
+chrTot_Fin[which(chrTot_Fin$SNP_lab=="rs12184277"&chrTot_Fin$Gene_lab=="ENSG00000228327"),]
+chrTot_Fin[which(chrTot_Fin$SNP_lab=="rs12184277"&chrTot_Fin$Gene_lab=="ENSG00000142856"),]
+chrTot_Fin[which(chrTot_Fin$SNP_lab=="rs6678666"&chrTot_Fin$Gene_lab=="ENSG00000142856"),]
+chrTot_Fin[which(chrTot_Fin$SNP_lab=="rs2254077"&chrTot_Fin$Gene_lab=="ENSG00000227262"),]
+1000000/57
+18134*100
+0.05/1813400
+0.05/100000
+#####################################################################
+# CIBERSORT FLOW CYTOMETRY DATA: ICeDT Fit with LM22 reference      #
+#####################################################################
+# PROGRAM NAME:                                                     #
+#   FlowCytometryFit_LM22Matrix.R                                   #
+# PROGRAMMER:                                                       #
+#   Douglas Roy Wilson, Jr.                                         #
+# DATE CREATED:                                                     #
+#   2/22/2018                                                       #
+# LAST EDIT:                                                        #
+#   2/22/2018                                                       #
+# VERSION:                                                          #
+#   R-3.3.1                                                         #
+#-------------------------------------------------------------------#
+# DESCRIPTION:                                                      #
+#   After altering the ICeD-T programs to allow model fit with a    #
+#   predefined reference expression matrix, we are refitting to the #
+#   CIBERSORT Flow Cytometry data using their LM22 matrix.          #
+#####################################################################
+library(alabama)
+useWgts   = TRUE
+useTarget = TRUE
+wgtOpt    = 0
+#-------------------------------------------------------------------#
+#|||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||#
+#                SECTION 0 - LIBRARY and NECESSARY CODE             #
+#|||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||#
+#-------------------------------------------------------------------#
+library(preprocessCore)
+meanFun <- function(x,group){
+out = tapply(X = x,INDEX = group,FUN = mean)
+return(out)
+}
+varFun <- function(x,group){
+out = tapply(X = x,INDEX = group,FUN = var)
+return(out)
+}
+IQRFun <- function(x,group){
+out = tapply(X = x,INDEX = group,FUN = IQR)
+return(out)
+}
+#-------------------------------------------------------------------#
+#|||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||#
+#                SECTION 1 - Fit CIBERSORT                          #
+#|||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||#
+#-------------------------------------------------------------------#
+setwd("D://DougData/Documents/Dissertation/Paper 3 - Immune Cell Deconv/Sun_Requested_Analysis/DrSun_GrantFigures/data/FlowCytometry/")
+#load ground truth
+flow = read.table("PBMCs-Fig3a-Flow-Cytometry.txt", sep="\t", row.names=1, header=T)
+dim(flow)
+flow[1:2,]
+# Load Web - App Cibersort:
+CSORT_FlowCyto = read.table(file = "../../programs/FlowCytometry/Fits/CIBERSORT.Output_FlowCyto.csv",
+header=TRUE,sep = ",",row.names = 1)
+results = CSORT_FlowCyto[,1:22]
+#clean results for comparison
+results_clean = cbind(results[,c(1:2,4:7,10)],apply(results[,11:12],1,sum),apply(results[,13:16],1,sum))
+#normalize to 1
+results_clean = 100*results_clean / apply(results_clean,1,sum)
+colnames(results_clean)[8]="NK cells"
+colnames(results_clean)[9]="Monocytes"
+#-------------------------------------------------------------------#
+#|||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||#
+#                SECTION 2 - PROCESS DATA                           #
+#|||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||#
+#-------------------------------------------------------------------#
+exprDat = read.table(file = "PBMCs-Fig3a-HumanHT-12-V4.txt",header = TRUE,sep = "\t")
+exprDat_v2 = exprDat[,-c(1)]
+rownames(exprDat_v2) = exprDat[,1]
+### CIBERSORT Load
+lm22 = read.table("LM22-ref-sample_logged.txt", , sep = "\t",
+header = TRUE, as.is = TRUE)
+dim(lm22)
+lm22[1:2,1:2]
+lm22 = data.matrix(lm22)
+sam = read.table("LM22-ref-sample_info.txt", , sep = "\t",
+header = TRUE, as.is = TRUE)
+dim(sam)
+sam[1:2,]
+table(sam$label)
+lm22_new = exp(lm22)
+g2use = intersect(rownames(lm22_new),rownames(exprDat_v2))
+lm22_new   = lm22_new[g2use,]
+exprDat_v2 = exprDat_v2[g2use,]
+### Option 1: Quantile normalize the reference data, match mixture to that
+### Option 2: Quantile normalize within major cell groups, then quantile normalize
+###           mixture to that.
+### Let's go with option 1 so that we can see what is happening.
+lm22_qnorm = normalize.quantiles(lm22_new)
+rownames(lm22_qnorm) = rownames(lm22_new)
+colnames(lm22_qnorm) = colnames(lm22_new)
+if(useTarget){
+target = normalize.quantiles.determine.target(x=lm22_qnorm)
+exprDat_qnorm = normalize.quantiles.use.target(x = as.matrix(exprDat_v2),target = target)
+rownames(exprDat_qnorm) = rownames(exprDat_v2)
+colnames(exprDat_qnorm) = colnames(exprDat_v2)
+} else {
+exprDat_qnorm = normalize.quantiles(as.matrix(exprDat_v2))
+rownames(exprDat_qnorm) = rownames(exprDat_v2)
+colnames(exprDat_qnorm) = colnames(exprDat_v2)
+}
+# restrict to LM22 genes:
+lm22_ref = read.table(file = "LM22.txt",header = TRUE,sep = "\t",row.names = 1)
+g2use = rownames(lm22_ref)
+g2use_fin = intersect(g2use,rownames(lm22_qnorm))
+g2use_fin = intersect(g2use_fin,rownames(exprDat_qnorm))
+lm22_ref2  = lm22_ref[g2use_fin,]
+MixDat_Use = exprDat_qnorm[g2use_fin,]
+PurDat_Use = lm22_qnorm[g2use_fin,]
+cellType   = sam$label
+#-------------------------------------------------------------------#
+#|||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||#
+#                SECTION 3 - FIT with CIBERSORT MATRIX              #
+#|||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||#
+#-------------------------------------------------------------------#
+RefMat = lm22_ref2
+CT_VAR = t(apply(X = log(PurDat_Use),MARGIN = 1,FUN = varFun,
+group = cellType))
+CT_VAR = CT_VAR[,c("B naive","B memory","Plasma","CD8+ T","CD4+ T","CD4+ T memory resting",
+"CD4+ T memory activated","Tfh","Tregs","T gd","NK resting","NK activated","Monocytes",
+"Macrophages M0","Macrophages M1","Macrophages M2","Dendritic resting","Dendritic activated",
+"Mast resting","Mast activated","Eosinophils","Neutrophils")]
+colnames(CT_VAR) = colnames(lm22_ref2)
+setwd("D://DougData/Documents/Dissertation/Paper 3 - Immune Cell Deconv/Sun_Requested_Analysis/DrSun_GrantFigures/programs/FlowCytometry/Fits/")
+fnm = sprintf("./CIBERSORT_useWgts_%s/ICeDT%s_target_%s_fit.RData",
+useWgts,wgtOpt,useTarget)
+load(fnm)
+wgtOpt
+resDj = fit$IC_Abundance[,-c(1)]
+results_clean_dj = cbind(resDj[,c(1:2,4:7,10)],apply(resDj[,11:12],1,sum),apply(resDj[,13:16],1,sum))
+#normalize to 1
+results_clean_dj = 100*results_clean_dj / apply(results_clean_dj,1,sum)
+colnames(results_clean_dj)[8]="NK cells"
+colnames(results_clean_dj)[9]="Monocytes"
+### Correlation Pre CT Correction
+sum((results_clean_dj-flow)^2)
+### Correlation Post CT COrrection
+ctSize = c(0.4,0.4,0.4,0.4,0.4,0.4,0.4,0.42,1.4)
+results_clean_dj_ctCorr = t(t(results_clean_dj)/ctSize)
+results_clean_dj_ctCorr = 100*(results_clean_dj_ctCorr/rowSums(results_clean_dj_ctCorr))
+results_clean_ctCorr = t(t(results_clean)/ctSize)
+results_clean_ctCorr = 100*(results_clean_ctCorr/rowSums(results_clean_ctCorr))
+sum((results_clean_dj_ctCorr-flow)^2)
+sum((results_clean_ctCorr-flow)^2)
+cor(c(results_clean_dj_ctCorr),c(as.matrix(flow)))
+cor(c(results_clean_ctCorr),c(as.matrix(flow)))

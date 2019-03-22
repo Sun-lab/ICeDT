@@ -2,7 +2,6 @@
 # STEP 3 - Reprocess Data                                           #
 #####################################################################
 # PROGRAM NAME:                                                     #
-#   (step3_ProcessDat_FitEpic_ICeDT_wwgt.R)                         #
 #   running_ICeDT_on_Hugo_data.R                                    #
 # PROGRAMMER:                                                       #
 #   Douglas Roy Wilson, Jr.                                         #
@@ -10,7 +9,7 @@
 # DATE CREATED:                                                     #
 #   02/19/2018                                                      #
 # LAST EDIT:                                                        #
-#   03/1/2018                                                       #
+#   03/21/2018                                                      #
 # VERSION:                                                          #
 #   R-3.5.1                                                         #
 #-------------------------------------------------------------------#
@@ -18,23 +17,22 @@
 #   Reads in data prepared by Chong Jin and Wei Sun, runs the       #
 #   ICeD-T deconvolution procedure, and saves output for further    #
 #   processing.                                                     #
+#                                                                   #
+#   Outputs from ICeD-T:                                            #
+#     fitnw -- no weight                                            #
+#     fitw0 -- use weight                                           #
 #####################################################################
 
 #-------------------------------------------------------------------#
 #                SECTION 0 - RUN PARAMETERS                         #
 #-------------------------------------------------------------------#
-# Geneset = {Revised, Original}
-#     - Revised  = EPIC Genes, LM22 Genes, MCP-Counter genes
-#     - Original = EPIC utilized genes
-# Weights = Revised
-#     - Revised  = Rescale the data and recompute variance
-# rescale = TRUE
-#
-# Outputs from ICeD-T:
-# fitnw -- no weight
-# fitw0 -- use weight
+#                                                                   #
+# Geneset: choose one of {"Revised", "Original"}                    #
+#     - "Revised"  = EPIC Genes, LM22 Genes, MCP-Counter genes      #
+#     - "Original" = EPIC utilized genes                            #
+#-------------------------------------------------------------------#
 
-Geneset = "Revised"
+Geneset = "Original"
 
 #-------------------------------------------------------------------#
 #                SECTION 1 - LIBRARIES and CODE                     #
@@ -176,7 +174,7 @@ table(rownames(X) %in% geneInfo$hgnc_symbol)
 rownames(X)[!rownames(X) %in% geneInfo$hgnc_symbol]
 
 #-------------------------------------------------------------------#
-#                SECTION 4 - MERGING DATASETS                       #
+#                SECTION 3 - MERGING DATASETS                       #
 #-------------------------------------------------------------------#
 
 ### Remove .XX from ENSG00000000003.XX to make consisent with Linsley
@@ -236,7 +234,7 @@ table(is.na(geneInfo$hgnc_symbol))
 length(unique(geneInfo$hgnc_symbol))
 
 #-------------------------------------------------------------------#
-#                SECTION 5 - Reducing Unlabeled Genes               #
+#                SECTION 4 - Reducing Unlabeled Genes               #
 #-------------------------------------------------------------------#
 t1 = table(geneInfo$hgnc_symbol)
 sort(t1, decreasing=TRUE)[1:5]
@@ -358,31 +356,10 @@ if(Geneset=="Original"){
   colnames(refVar) = c("Bcells","CAFs","CD4_Tcells","CD8_Tcells",
                        "Endothelial","Macrophages","NKcells")
   
-} else if(rescale==FALSE && Geneset=="Original"){
-  load("./programs/EPIC-master/data/TRef.rda")
-  
-  Egenes = TRef$sigGenes
-  
-  commonGenes = intersect(rownames(Bdat_r),rownames(MixDat_tot))
-  Egenes = Egenes[which(Egenes%in%commonGenes)]
-
-  bulk = MixDat_tot[Egenes,]
-  refProfiles = TRef_eprof_r[Egenes,]
-  refVar      = TRef_vprof_r[Egenes,]
-  
-} else if(rescale==FALSE && Geneset=="Revised"){
-  Egenes = union(FList_tot,rownames(X))
-  
-  commonGenes = intersect(rownames(Bdat_r),rownames(MixDat_tot))
-  Egenes = Egenes[which(Egenes%in%commonGenes)]
-  
-  bulk = MixDat_tot[Egenes,]
-  refProfiles = TRef_eprof_r[Egenes,]
-  refVar      = TRef_vprof_r[Egenes,]
 }
 
 #-------------------------------------------------------------------#
-#                SECTION 5 - Run Data                               #
+#                SECTION 6 - Run Data                               #
 #-------------------------------------------------------------------#
 
 # Using ICeDT package
@@ -400,7 +377,7 @@ save(EPIC_Bref, EPIC_Tref, file="./data/EPIC_Fits.RData")
 load(sprintf("./data/ICeDT_ExpandedFits_GeneSet%s.RData",Geneset))
 
 #-------------------------------------------------------------------#
-#                SECTION 6 - PROCESS OUTPUT                         #
+#                SECTION 7 - PROCESS OUTPUT                         #
 #-------------------------------------------------------------------#
 pinfo = read.table("./data/patient_info.txt", sep="\t", as.is=TRUE, 
                    header=TRUE)
@@ -417,7 +394,7 @@ table(rownames(EPIC_Tref$cellFractions) == pinfo$SRA.tumor.RNA)
 table(pinfo$irRECIST)
 
 #-------------------------------------------------------------------#
-#                SECTION 7 - PLOTTING RESULTS                       #
+#                SECTION 8 - PLOTTING RESULTS                       #
 #-------------------------------------------------------------------#
 figures_dir = sprintf("./figures/GeneSet%s/",Geneset)
 dir.create(figures_dir, recursive = TRUE)
@@ -530,6 +507,7 @@ renorm_CSORT = t(t(renorm_CSORT)/CSORT_CTSize)
 renorm_CSORT = renorm_CSORT/rowSums(renorm_CSORT)
 
 pdf("./figures/CIBERSORT_CD8_vs_response.pdf", width=4, height=4)
+par(mar=c(10,4,1,1), bty="n", las=2)
 boxplot(renorm_CSORT[,4] ~ pinfo$irRECIST, ylab="CD8+ T cell proportion", outline=FALSE, 
         ylim=c(0, max(renorm_CSORT[,4])))
 set.seed(1234)
@@ -547,6 +525,7 @@ renorm_CSORT_TRef = t(t(renorm_CSORT_TRef)/c(0.40,0.40,0.40,0.40,0.40,1.42,0.43)
 renorm_CSORT_TRef = renorm_CSORT_TRef/rowSums(renorm_CSORT_TRef)
 
 pdf("./figures/CIBERSORT_TRef_CD8_vs_response.pdf", width=4, height=4)
+par(mar=c(10,4,1,1), bty="n", las=2)
 boxplot(renorm_CSORT_TRef[,4] ~ pinfo$irRECIST, ylab="CD8+ T cell proportion", outline=FALSE, 
         ylim=c(0, max(renorm_CSORT_TRef[,4])))
 set.seed(1234)
@@ -573,7 +552,7 @@ jonckheere.test(x=renorm_EPIC[,4],g = disCat_num,alternative = "decreasing")
 jonckheere.test(x=renorm_CSORT[,4],g = disCat_num,alternative = "decreasing")
 
 #-------------------------------------------------------------------#
-#                SECTION 8 - CHECK ABBERANT PROBABILITY             #
+#                SECTION 9 - CHECK ABBERANT PROBABILITY             #
 #-------------------------------------------------------------------#
 
 p0 = fitnw$cProb
@@ -625,10 +604,10 @@ cat(sprintf("Consistent probability cutoffs for model w/o weight: %.3f, %.3f \n"
 cat(sprintf("Consistent probability cutoffs for model w/ weight: %.3f, %.3f \n", 
             p1_cutoffs[1], p1_cutoffs[2]))
 
-# Revised + Revised + rescaled=TRUE:
+# Geneset=="Revised":
 # Consistent probability cutoffs for model w/o weight: 0.558, 0.680 
 # Consistent probability cutoffs for model w/ weight: 0.946, 0.983
-# Original + Revised + rescaled=TRUE:
+# Geneset=="Original":
 # Consistent probability cutoffs for model w/o weight: 0.509, 0.549 
 # Consistent probability cutoffs for model w/ weight: 0.512, 0.538 
 
@@ -636,6 +615,7 @@ pdf(sprintf("./figures/ExpectedVsObservedExpr_GeneSet%s.pdf",
             Geneset), width=9, height=6)
 par(mar=c(5,4,1,1), bty="n", mfrow=c(2,3), cex=0.8)
 
+# plot observed vs. expected expression, stratified by 3-quantiles
 plot_log1p = function(x, y, ...) {
   smoothScatter(log(x+1e-5), log(y+1e-5), xlim=c(-5, 10), ylim=c(-5, 10), ...)
   legend("bottomright", bty="n",

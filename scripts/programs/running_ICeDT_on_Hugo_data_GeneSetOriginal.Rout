@@ -1,0 +1,1208 @@
+
+R version 3.5.1 (2018-07-02) -- "Feather Spray"
+Copyright (C) 2018 The R Foundation for Statistical Computing
+Platform: x86_64-apple-darwin15.6.0 (64-bit)
+
+R is free software and comes with ABSOLUTELY NO WARRANTY.
+You are welcome to redistribute it under certain conditions.
+Type 'license()' or 'licence()' for distribution details.
+
+  Natural language support but running in an English locale
+
+R is a collaborative project with many contributors.
+Type 'contributors()' for more information and
+'citation()' on how to cite R or R packages in publications.
+
+Type 'demo()' for some demos, 'help()' for on-line help, or
+'help.start()' for an HTML browser interface to help.
+Type 'q()' to quit R.
+
+> #####################################################################
+> # STEP 3 - Reprocess Data                                           #
+> #####################################################################
+> # PROGRAM NAME:                                                     #
+> #   running_ICeDT_on_Hugo_data.R                                    #
+> # PROGRAMMER:                                                       #
+> #   Douglas Roy Wilson, Jr.                                         #
+> #   Chong Jin                                                       #
+> # DATE CREATED:                                                     #
+> #   02/19/2018                                                      #
+> # LAST EDIT:                                                        #
+> #   03/21/2018                                                      #
+> # VERSION:                                                          #
+> #   R-3.5.1                                                         #
+> #-------------------------------------------------------------------#
+> # DESCRIPTION:                                                      #
+> #   Reads in data prepared by Chong Jin and Wei Sun, runs the       #
+> #   ICeD-T deconvolution procedure, and saves output for further    #
+> #   processing.                                                     #
+> #                                                                   #
+> #   Outputs from ICeD-T:                                            #
+> #     fitnw -- no weight                                            #
+> #     fitw0 -- use weight                                           #
+> #####################################################################
+> 
+> #-------------------------------------------------------------------#
+> #                SECTION 0 - RUN PARAMETERS                         #
+> #-------------------------------------------------------------------#
+> #                                                                   #
+> # Geneset: choose one of {"Revised", "Original"}                    #
+> #     - "Revised"  = EPIC Genes, LM22 Genes, MCP-Counter genes      #
+> #     - "Original" = EPIC utilized genes                            #
+> #-------------------------------------------------------------------#
+> 
+> Geneset = "Original"
+> 
+> #-------------------------------------------------------------------#
+> #                SECTION 1 - LIBRARIES and CODE                     #
+> #-------------------------------------------------------------------#
+> 
+> library(nnls)
+> library(quantreg)
+Loading required package: SparseM
+
+Attaching package: ‘SparseM’
+
+The following object is masked from ‘package:base’:
+
+    backsolve
+
+> library(hqreg)
+> library(gplots)
+
+Attaching package: ‘gplots’
+
+The following object is masked from ‘package:stats’:
+
+    lowess
+
+Warning message:
+package ‘gplots’ was built under R version 3.5.2 
+> library(org.Hs.eg.db)
+Loading required package: AnnotationDbi
+Loading required package: stats4
+Loading required package: BiocGenerics
+Loading required package: parallel
+
+Attaching package: ‘BiocGenerics’
+
+The following objects are masked from ‘package:parallel’:
+
+    clusterApply, clusterApplyLB, clusterCall, clusterEvalQ,
+    clusterExport, clusterMap, parApply, parCapply, parLapply,
+    parLapplyLB, parRapply, parSapply, parSapplyLB
+
+The following objects are masked from ‘package:stats’:
+
+    IQR, mad, sd, var, xtabs
+
+The following objects are masked from ‘package:base’:
+
+    anyDuplicated, append, as.data.frame, basename, cbind, colMeans,
+    colnames, colSums, dirname, do.call, duplicated, eval, evalq,
+    Filter, Find, get, grep, grepl, intersect, is.unsorted, lapply,
+    lengths, Map, mapply, match, mget, order, paste, pmax, pmax.int,
+    pmin, pmin.int, Position, rank, rbind, Reduce, rowMeans, rownames,
+    rowSums, sapply, setdiff, sort, table, tapply, union, unique,
+    unsplit, which, which.max, which.min
+
+Loading required package: Biobase
+Welcome to Bioconductor
+
+    Vignettes contain introductory material; view with
+    'browseVignettes()'. To cite Bioconductor, see
+    'citation("Biobase")', and for packages 'citation("pkgname")'.
+
+Loading required package: IRanges
+Loading required package: S4Vectors
+
+Attaching package: ‘S4Vectors’
+
+The following object is masked from ‘package:gplots’:
+
+    space
+
+The following object is masked from ‘package:base’:
+
+    expand.grid
+
+
+> library(alabama)
+Loading required package: numDeriv
+> library(EPIC)
+> library(clinfun)
+> library(ICeDT)
+Loading required package: gtools
+> 
+> #-------------------------------------------------------------------#
+> #                SECTION 2 - READ-IN PROVIDED DATA                  #
+> #-------------------------------------------------------------------#
+> 
+> # -----------------------------------------------------------------
+> # OBTAIN LM22 Genes
+> # -----------------------------------------------------------------
+> setwd("..")
+> sig_matrix = './data/FlowCytometry/LM22.txt'
+> X = read.table(sig_matrix, header=TRUE, sep="\t", row.names=1, 
++                check.names=FALSE)
+> 
+> X = data.matrix(X)
+> 
+> dim(X)
+[1] 547  22
+> X[1:2,1:5]
+      B cells naive B cells memory Plasma cells T cells CD8 T cells CD4 naive
+ABCB4     555.71345       10.74423     7.225819     4.31128           4.60586
+ABCB9      15.60354       22.09479   653.392328    24.22372          35.67151
+> 
+> colnames(X)
+ [1] "B cells naive"                "B cells memory"              
+ [3] "Plasma cells"                 "T cells CD8"                 
+ [5] "T cells CD4 naive"            "T cells CD4 memory resting"  
+ [7] "T cells CD4 memory activated" "T cells follicular helper"   
+ [9] "T cells regulatory (Tregs)"   "T cells gamma delta"         
+[11] "NK cells resting"             "NK cells activated"          
+[13] "Monocytes"                    "Macrophages M0"              
+[15] "Macrophages M1"               "Macrophages M2"              
+[17] "Dendritic cells resting"      "Dendritic cells activated"   
+[19] "Mast cells resting"           "Mast cells activated"        
+[21] "Eosinophils"                  "Neutrophils"                 
+> summary(X)
+ B cells naive       B cells memory       Plasma cells       T cells CD8       
+ Min.   :    0.972   Min.   :    2.709   Min.   :    1.48   Min.   :    1.559  
+ 1st Qu.:   19.728   1st Qu.:   20.305   1st Qu.:   18.65   1st Qu.:   23.075  
+ Median :   68.812   Median :   73.558   Median :   66.14   Median :   78.785  
+ Mean   :  779.210   Mean   :  677.796   Mean   :  675.97   Mean   :  735.557  
+ 3rd Qu.:  330.379   3rd Qu.:  329.097   3rd Qu.:  223.35   3rd Qu.:  320.228  
+ Max.   :27164.520   Max.   :30254.068   Max.   :42851.28   Max.   :15195.169  
+ T cells CD4 naive   T cells CD4 memory resting T cells CD4 memory activated
+ Min.   :    2.308   Min.   :    1.244          Min.   :    0.453           
+ 1st Qu.:   22.000   1st Qu.:   19.833          1st Qu.:   20.401           
+ Median :   66.850   Median :   78.522          Median :   76.316           
+ Mean   :  581.090   Mean   :  615.111          Mean   :  461.191           
+ 3rd Qu.:  252.995   3rd Qu.:  277.339          3rd Qu.:  262.877           
+ Max.   :19513.313   Max.   :18085.945          Max.   :21960.798           
+ T cells follicular helper T cells regulatory (Tregs) T cells gamma delta
+ Min.   :    1.864         Min.   :    1.646          Min.   :    3.354  
+ 1st Qu.:   20.559         1st Qu.:   33.306          1st Qu.:   36.307  
+ Median :   68.812         Median :   91.912          Median :  117.934  
+ Mean   :  681.133         Mean   :  691.380          Mean   :  803.443  
+ 3rd Qu.:  246.636         3rd Qu.:  367.489          3rd Qu.:  425.032  
+ Max.   :20117.665         Max.   :19876.206          Max.   :19080.915  
+ NK cells resting    NK cells activated   Monocytes         Macrophages M0    
+ Min.   :    2.161   Min.   :    1.48   Min.   :    1.421   Min.   :    1.06  
+ 1st Qu.:   27.017   1st Qu.:   26.17   1st Qu.:   20.494   1st Qu.:   19.60  
+ Median :   93.280   Median :   82.18   Median :   79.149   Median :   58.12  
+ Mean   :  800.676   Mean   :  852.06   Mean   :  561.041   Mean   :  519.42  
+ 3rd Qu.:  342.771   3rd Qu.:  256.40   3rd Qu.:  271.372   3rd Qu.:  204.55  
+ Max.   :26164.601   Max.   :38944.02   Max.   :29800.421   Max.   :38944.02  
+ Macrophages M1     Macrophages M2      Dendritic cells resting
+ Min.   :    0.25   Min.   :    0.453   Min.   :    1.026      
+ 1st Qu.:   23.05   1st Qu.:   23.403   1st Qu.:   19.723      
+ Median :   76.08   Median :   88.341   Median :   65.778      
+ Mean   :  996.14   Mean   :  572.152   Mean   :  539.898      
+ 3rd Qu.:  284.61   3rd Qu.:  268.321   3rd Qu.:  202.624      
+ Max.   :38944.02   Max.   :16386.057   Max.   :15992.470      
+ Dendritic cells activated Mast cells resting  Mast cells activated
+ Min.   :    0.759         Min.   :    2.435   Min.   :    1.12    
+ 1st Qu.:   22.607         1st Qu.:   27.843   1st Qu.:   29.19    
+ Median :   70.791         Median :   76.946   Median :   92.54    
+ Mean   :  734.217         Mean   :  513.519   Mean   :  699.19    
+ 3rd Qu.:  259.681         3rd Qu.:  235.396   3rd Qu.:  324.56    
+ Max.   :30950.328         Max.   :28290.310   Max.   :35339.69    
+  Eosinophils        Neutrophils       
+ Min.   :    1.87   Min.   :    1.926  
+ 1st Qu.:   39.78   1st Qu.:   26.592  
+ Median :  119.94   Median :  111.272  
+ Mean   :  675.88   Mean   :  935.448  
+ 3rd Qu.:  424.21   3rd Qu.:  429.546  
+ Max.   :26617.24   Max.   :27644.590  
+> 
+> # ------------------------------------------------------------
+> # LOAD gene Annotation Data
+> # ------------------------------------------------------------
+> geneInfo = read.table("./data/gencode.v27.genes.txt", sep="\t", as.is=TRUE, 
++                       header=TRUE,quote="")
+> 
+> geneInfo$geneId2 = unlist(lapply(strsplit(x = geneInfo$geneId,split = "\\."),
++                                  '[[',1))
+> 
+> dim(geneInfo)
+[1] 58288     9
+> geneInfo[1:2,]
+              geneId  chr strand     start       end ensembl_gene_id
+1 ENSG00000000003.14 chrX      - 100627109 100639991 ENSG00000000003
+2  ENSG00000000005.5 chrX      + 100584802 100599885 ENSG00000000005
+  hgnc_symbol                                       description         geneId2
+1      TSPAN6 tetraspanin 6 [Source:HGNC Symbol;Acc:HGNC:11858] ENSG00000000003
+2        TNMD   tenomodulin [Source:HGNC Symbol;Acc:HGNC:17757] ENSG00000000005
+> length(unique(geneInfo$geneId))
+[1] 58288
+> 
+> # ------------------------------------------------------------
+> # EPIC Genes
+> # ------------------------------------------------------------
+> 
+> FList2 = c("BANK1","CD79A", "CD79B", "FCER2", "FCRL2", "FCRL5", "MS4A1", 
++            "PAX5", "POU2AF1", "STAP1", "TCL1A", "ADAM33", "CLDN11", "COL1A1", 
++            "COL3A1", "COL14A1", "CRISPLD2", "CXCL14", "DPT", "F3", "FBLN1", 
++            "ISLR", "LUM", "MEG3", "MFAP5", "PRELP", "PTGIS", "SFRP2", "SFRP4", 
++            "SYNPO2", "TMEM119", "ANKRD55", "DGKA", "FOXP3", "GCNT4", "IL2RA", 
++            "MDS2", "RCAN3", "TBC1D4", "TRAT1", "CD8B", "HAUS3", "JAKMIP1",
++            "NAA16", "TSPYL1", "CDH5", "CLDN5", "CLEC14A", "CXorf36", "ECSCR", 
++            "F2RL3", "FLT1", "FLT4", "GPR4", "GPR182", "KDR", "MMRN1", "MMRN2", 
++            "MYCT1", "PTPRB", "RHOJ", "SLCO2A1", "SOX18", "STAB2", "VWF",
++            "APOC1", "C1QC", "CD14", "CD163", "CD300C", "CD300E", "CSF1R", 
++            "F13A1", "FPR3", "HAMP", "IL1B", "LILRB4", "MS4A6A", "MSR1", 
++            "SIGLEC1", "VSIG4", "CD33", "CD300C", "CD300E", "CECR1", "CLEC6A", 
++            "CPVL", "EGR2", "EREG", "MS4A6A", "NAGA", "SLC37A2",
++            "CEACAM3", "CNTNAP3", "CXCR1", "CYP4F3", "FFAR2", "HIST1H2BC", 
++            "HIST1H3D", "KY", "MMP25", "PGLYRP1", "SLC12A1", "TAS2R40",
++            "CD160", "CLIC3", "FGFBP2", "GNLY", "GNPTAB", "KLRF1", "NCR1", 
++            "NMUR1", "S1PR5", "SH2D1B", "BCL11B", "CD5", "CD28", "IL7R", 
++            "ITK", "THEMIS", "UBASH3A")
+> 
+> FList_tot = FList2
+> 
+> # ------------------------------------------------------------
+> # load gene expression data parsed from Hugo et al. 2016
+> # ------------------------------------------------------------
+> 
+> load("./data/FPKM_and_counts_filtered.RData")
+> ls()
+[1] "counts"          "counts_filtered" "FList_tot"       "FList2"         
+[5] "FPKM"            "geneInfo"        "Geneset"         "sig_matrix"     
+[9] "X"              
+> 
+> dim(FPKM)
+[1] 15668    28
+> FPKM[1:2,1:5]
+                     SRR3184279   SRR3184280   SRR3184281   SRR3184282
+ENSG00000000003.14 0.0001035553 0.0002791259 0.0002704871 0.0001745861
+ENSG00000000419.12 0.0005016920 0.0005020041 0.0009747064 0.0007475531
+                     SRR3184283
+ENSG00000000003.14 0.0002422651
+ENSG00000000419.12 0.0003987192
+> 
+> dim(counts)
+[1] 58288    28
+> counts[1:2,1:5]
+                   SRR3184279 SRR3184280 SRR3184281 SRR3184282 SRR3184283
+ENSG00000000003.14       2004       2438       4155       3051       4696
+ENSG00000000005.5           8          0          2          8          2
+> table(rownames(counts) == geneInfo$geneId)
+
+ TRUE 
+58288 
+> table(rownames(X) %in% geneInfo$hgnc_symbol)
+
+FALSE  TRUE 
+   16   531 
+> 
+> ### Match FLIst to ensembl_gene_id
+> mat_FList = match(FList_tot,geneInfo$hgnc_symbol)
+> table(FList_tot==geneInfo$hgnc_symbol[mat_FList])
+
+TRUE 
+ 120 
+> FList_ens = geneInfo$ensembl_gene_id[mat_FList]
+> FList_ens = FList_ens[!is.na(FList_ens)]
+> 
+> # --------------------------------------------------------------------
+> # try to identify those genes that we do not have matched gene symbols
+> # --------------------------------------------------------------------
+> 
+> w2check = which(! rownames(X) %in% geneInfo$hgnc_symbol)
+> w2check
+ [1]  26 182 183 184 190 195 206 234 236 299 300 305 323 327 329 330
+> rownames(X)[w2check]
+ [1] "ATHL1"        "EMR1"         "EMR2"         "EMR3"         "FAIM3"       
+ [6] "FAM65B"       "FLJ13197"     "GPR97"        "GSTT1"        "KIAA0226L"   
+[11] "KIAA0754"     "KIRREL"       "LILRA3"       "LINC00597"    "LOC100130100"
+[16] "LOC126987"   
+> keys = rownames(X)[w2check]
+> 
+> columns(org.Hs.eg.db)
+ [1] "ACCNUM"       "ALIAS"        "ENSEMBL"      "ENSEMBLPROT"  "ENSEMBLTRANS"
+ [6] "ENTREZID"     "ENZYME"       "EVIDENCE"     "EVIDENCEALL"  "GENENAME"    
+[11] "GO"           "GOALL"        "IPI"          "MAP"          "OMIM"        
+[16] "ONTOLOGY"     "ONTOLOGYALL"  "PATH"         "PFAM"         "PMID"        
+[21] "PROSITE"      "REFSEQ"       "SYMBOL"       "UCSCKG"       "UNIGENE"     
+[26] "UNIPROT"     
+> einfo = select(org.Hs.eg.db, keys=keys, columns = c("SYMBOL","ENSEMBL"), 
++                keytype="ALIAS")
+'select()' returned 1:many mapping between keys and columns
+> 
+> dim(einfo)
+[1] 19  3
+> einfo
+          ALIAS    SYMBOL         ENSEMBL
+1         ATHL1     PGGHG ENSG00000142102
+2          EMR1    ADGRE1 ENSG00000174837
+3          EMR2    ADGRE2 ENSG00000127507
+4          EMR3    ADGRE3 ENSG00000131355
+5         FAIM3      FCMR ENSG00000162894
+6        FAM65B    RIPOR2 ENSG00000111913
+7      FLJ13197      <NA>            <NA>
+8         GPR97    ADGRG3 ENSG00000182885
+9         GSTT1     GSTT1 ENSG00000277656
+10    KIAA0226L    RUBCNL ENSG00000102445
+11     KIAA0754  KIAA0754 ENSG00000127603
+12       KIRREL   KIRREL1 ENSG00000183853
+13       LILRA3    LILRA3 ENSG00000275841
+14       LILRA3    LILRA3 ENSG00000276175
+15       LILRA3    LILRA3 ENSG00000273884
+16       LILRA3    LILRA3 ENSG00000278046
+17    LINC00597 LINC00597            <NA>
+18 LOC100130100      <NA>            <NA>
+19    LOC126987 LOC126987            <NA>
+> 
+> mat1 = match(einfo$SYMBOL, geneInfo$hgnc_symbol)
+> mat2 = match(einfo$ENSEMBL, geneInfo$ensembl_gene_id)
+> 
+> table(mat1 == mat2, useNA="ifany")
+
+TRUE <NA> 
+   9   10 
+> table(is.na(mat1), is.na(mat2))
+       
+        FALSE TRUE
+  FALSE     9    0
+  TRUE      1    9
+> 
+> einfo[which(is.na(mat2)),]
+          ALIAS    SYMBOL         ENSEMBL
+7      FLJ13197      <NA>            <NA>
+9         GSTT1     GSTT1 ENSG00000277656
+13       LILRA3    LILRA3 ENSG00000275841
+14       LILRA3    LILRA3 ENSG00000276175
+15       LILRA3    LILRA3 ENSG00000273884
+16       LILRA3    LILRA3 ENSG00000278046
+17    LINC00597 LINC00597            <NA>
+18 LOC100130100      <NA>            <NA>
+19    LOC126987 LOC126987            <NA>
+> 
+> mat3 = na.omit(mat2)
+> cbind(einfo[which(!is.na(mat2)),], geneInfo[mat3,1:7])
+       ALIAS   SYMBOL         ENSEMBL             geneId   chr strand     start
+1      ATHL1    PGGHG ENSG00000142102 ENSG00000142102.15 chr11      +    289135
+2       EMR1   ADGRE1 ENSG00000174837 ENSG00000174837.14 chr19      +   6887566
+3       EMR2   ADGRE2 ENSG00000127507 ENSG00000127507.17 chr19      -  14732393
+4       EMR3   ADGRE3 ENSG00000131355 ENSG00000131355.14 chr19      -  14619117
+5      FAIM3     FCMR ENSG00000162894 ENSG00000162894.11  chr1      - 206904386
+6     FAM65B   RIPOR2 ENSG00000111913 ENSG00000111913.17  chr6      -  24804282
+8      GPR97   ADGRG3 ENSG00000182885 ENSG00000182885.16 chr16      +  57668187
+10 KIAA0226L   RUBCNL ENSG00000102445 ENSG00000102445.18 chr13      -  46342000
+11  KIAA0754 KIAA0754 ENSG00000127603 ENSG00000127603.24  chr1      +  39081316
+12    KIRREL  KIRREL1 ENSG00000183853 ENSG00000183853.17  chr1      + 157993273
+         end ensembl_gene_id hgnc_symbol
+1     296107 ENSG00000142102       PGGHG
+2    6940459 ENSG00000174837      ADGRE1
+3   14778541 ENSG00000127507      ADGRE2
+4   14690027 ENSG00000131355      ADGRE3
+5  206923247 ENSG00000162894        FCMR
+6   25042018 ENSG00000111913      RIPOR2
+8   57689378 ENSG00000182885      ADGRG3
+10  46438190 ENSG00000102445      RUBCNL
+11  39487177 ENSG00000127603       MACF1
+12 158100262 ENSG00000183853     KIRREL1
+> 
+> einfo[which(is.na(mat2) & (! is.na(mat1))),]
+[1] ALIAS   SYMBOL  ENSEMBL
+<0 rows> (or 0-length row.names)
+> einfo[which(! is.na(mat2) & (is.na(mat1))),]
+      ALIAS   SYMBOL         ENSEMBL
+11 KIAA0754 KIAA0754 ENSG00000127603
+> 
+> geneSym = keys
+> newSym  = einfo$SYMBOL[match(keys, einfo$ALIAS)]
+> cbind(geneSym, newSym)
+      geneSym        newSym     
+ [1,] "ATHL1"        "PGGHG"    
+ [2,] "EMR1"         "ADGRE1"   
+ [3,] "EMR2"         "ADGRE2"   
+ [4,] "EMR3"         "ADGRE3"   
+ [5,] "FAIM3"        "FCMR"     
+ [6,] "FAM65B"       "RIPOR2"   
+ [7,] "FLJ13197"     NA         
+ [8,] "GPR97"        "ADGRG3"   
+ [9,] "GSTT1"        "GSTT1"    
+[10,] "KIAA0226L"    "RUBCNL"   
+[11,] "KIAA0754"     "KIAA0754" 
+[12,] "KIRREL"       "KIRREL1"  
+[13,] "LILRA3"       "LILRA3"   
+[14,] "LINC00597"    "LINC00597"
+[15,] "LOC100130100" NA         
+[16,] "LOC126987"    "LOC126987"
+> 
+> w2update = which(!is.na(newSym))
+> geneSym[w2update] = newSym[w2update]
+> cbind(geneSym, newSym)
+      geneSym        newSym     
+ [1,] "PGGHG"        "PGGHG"    
+ [2,] "ADGRE1"       "ADGRE1"   
+ [3,] "ADGRE2"       "ADGRE2"   
+ [4,] "ADGRE3"       "ADGRE3"   
+ [5,] "FCMR"         "FCMR"     
+ [6,] "RIPOR2"       "RIPOR2"   
+ [7,] "FLJ13197"     NA         
+ [8,] "ADGRG3"       "ADGRG3"   
+ [9,] "GSTT1"        "GSTT1"    
+[10,] "RUBCNL"       "RUBCNL"   
+[11,] "KIAA0754"     "KIAA0754" 
+[12,] "KIRREL1"      "KIRREL1"  
+[13,] "LILRA3"       "LILRA3"   
+[14,] "LINC00597"    "LINC00597"
+[15,] "LOC100130100" NA         
+[16,] "LOC126987"    "LOC126987"
+> 
+> geneInfo$hgnc_symbol[which(geneInfo$hgnc_symbol == "KIRREL1")] = "KIRREL"
+> geneInfo$hgnc_symbol[which(geneInfo$hgnc_symbol == "MACF1")] = "KIAA0754"
+> 
+> rownames(X)[w2check] = geneSym
+> table(rownames(X) %in% geneInfo$hgnc_symbol)
+
+FALSE  TRUE 
+    7   540 
+> 
+> rownames(X)[!rownames(X) %in% geneInfo$hgnc_symbol]
+[1] "FLJ13197"     "GSTT1"        "KIRREL1"      "LILRA3"       "LINC00597"   
+[6] "LOC100130100" "LOC126987"   
+> 
+> #-------------------------------------------------------------------#
+> #                SECTION 3 - MERGING DATASETS                       #
+> #-------------------------------------------------------------------#
+> 
+> ### Remove .XX from ENSG00000000003.XX to make consisent with Linsley
+> counts_rn = unlist(lapply(strsplit(x = rownames(counts),split="\\."),
++                           '[[',1))
+> counts_rn[1:5]
+[1] "ENSG00000000003" "ENSG00000000005" "ENSG00000000419" "ENSG00000000457"
+[5] "ENSG00000000460"
+> #rownames(counts)
+> 
+> ### Handling Duplicates from Paralogous Y
+> id2chk = which(duplicated(counts_rn))
+> rownames(counts)[id2chk]
+ [1] "ENSG00000002586.18_PAR_Y" "ENSG00000124333.15_PAR_Y"
+ [3] "ENSG00000124334.17_PAR_Y" "ENSG00000167393.17_PAR_Y"
+ [5] "ENSG00000168939.11_PAR_Y" "ENSG00000169084.13_PAR_Y"
+ [7] "ENSG00000169093.15_PAR_Y" "ENSG00000169100.13_PAR_Y"
+ [9] "ENSG00000178605.13_PAR_Y" "ENSG00000182162.10_PAR_Y"
+[11] "ENSG00000182378.13_PAR_Y" "ENSG00000182484.15_PAR_Y"
+[13] "ENSG00000185203.12_PAR_Y" "ENSG00000185291.11_PAR_Y"
+[15] "ENSG00000185960.13_PAR_Y" "ENSG00000196433.12_PAR_Y"
+[17] "ENSG00000197976.11_PAR_Y" "ENSG00000198223.16_PAR_Y"
+[19] "ENSG00000205755.11_PAR_Y" "ENSG00000214717.11_PAR_Y"
+[21] "ENSG00000223274.6_PAR_Y"  "ENSG00000223484.7_PAR_Y" 
+[23] "ENSG00000223511.6_PAR_Y"  "ENSG00000223571.6_PAR_Y" 
+[25] "ENSG00000223773.7_PAR_Y"  "ENSG00000225661.7_PAR_Y" 
+[27] "ENSG00000226179.6_PAR_Y"  "ENSG00000227159.8_PAR_Y" 
+[29] "ENSG00000228410.6_PAR_Y"  "ENSG00000228572.7_PAR_Y" 
+[31] "ENSG00000229232.6_PAR_Y"  "ENSG00000230542.6_PAR_Y" 
+[33] "ENSG00000234622.6_PAR_Y"  "ENSG00000234958.6_PAR_Y" 
+[35] "ENSG00000236017.8_PAR_Y"  "ENSG00000236871.7_PAR_Y" 
+[37] "ENSG00000237040.6_PAR_Y"  "ENSG00000237531.6_PAR_Y" 
+[39] "ENSG00000237801.6_PAR_Y"  "ENSG00000265658.6_PAR_Y" 
+[41] "ENSG00000270726.6_PAR_Y"  "ENSG00000275287.5_PAR_Y" 
+[43] "ENSG00000277120.5_PAR_Y"  "ENSG00000280767.3_PAR_Y" 
+[45] "ENSG00000281849.3_PAR_Y" 
+> 
+> rows2chk = rownames(counts)[id2chk]
+> max.r = apply(X = counts[rows2chk,],1,max)
+> 
+> counts2 = counts[-which(rownames(counts)%in%rows2chk),]
+> counts  = counts2
+> 
+> counts_rn = unlist(lapply(strsplit(x = rownames(counts),split="\\."),
++                           '[[',1))
+> rownames(counts) = counts_rn
+> 
+> geneInfo2 = geneInfo[-c(which(geneInfo$geneId%in%rows2chk)),]
+> geneInfo  = geneInfo2
+> 
+> ### Normalize Data TPM
+> countsS = counts
+> 
+> Exp2use = countsS
+> 
+> r25  = apply(Exp2use, 1, quantile, probs = 0.25)
+> w2kp = which((r25 > 10)|(rownames(Exp2use)%in%FList_ens))
+> 
+> Exp2use = Exp2use[w2kp,]
+> tot = colSums(Exp2use)
+> s75 = apply(Exp2use, 2, quantile, prob = 0.75)
+> 
+> cor(tot, s75)
+[1] 0.9287276
+> 
+> GeneLengths_Mat = readRDS("./data/gene_lengths_v27.rds")
+> dim(GeneLengths_Mat)
+[1] 58288     3
+> GeneLengths_Mat[1:2,]
+          Gencode_ID Exonic         Ensembl_ID
+1 ENSG00000000003.14   4535 ENSG00000000003.14
+2  ENSG00000000005.5   1610  ENSG00000000005.5
+> 
+> w2rm = which(GeneLengths_Mat$Gencode_ID%in%rows2chk)
+> GeneLengths_Mat = GeneLengths_Mat[-c(w2rm),]
+> 
+> mat1 = match(rownames(Exp2use), 
++              unlist(lapply(X = strsplit(x = GeneLengths_Mat$Gencode_ID,split ="\\."),'[[',1)))
+> L = GeneLengths_Mat[mat1, "Exonic"]
+> TPM = (Exp2use+1)/L
+> TPM = (1e6)*t(t(TPM)/colSums(TPM))
+> 
+> geneInfo = geneInfo[which(geneInfo$geneId2%in%rownames(TPM)),]
+> 
+> all(geneInfo$geneId2==rownames(TPM))
+[1] TRUE
+> table(is.na(geneInfo$hgnc_symbol))
+
+FALSE 
+17438 
+> length(unique(geneInfo$hgnc_symbol))
+[1] 15726
+> 
+> #-------------------------------------------------------------------#
+> #                SECTION 4 - Reducing Unlabeled Genes               #
+> #-------------------------------------------------------------------#
+> t1 = table(geneInfo$hgnc_symbol)
+> sort(t1, decreasing=TRUE)[1:5]
+
+             COG8  POLR2J4     A1BG A1BG-AS1 
+    1711        2        2        1        1 
+> 
+> ww1 = which(geneInfo$hgnc_symbol == "COG8")
+> ww1
+[1] 13745 16757
+> apply(TPM[ww1,], 1, summary)
+        ENSG00000213380 ENSG00000272617
+Min.          0.5572421       0.6797452
+1st Qu.       1.2265944       1.8491105
+Median        1.4493311       2.8074991
+Mean          1.7007862       3.2787716
+3rd Qu.       2.0980467       4.0848648
+Max.          3.4828828       8.8779687
+> 
+> ww1 = which(geneInfo$hgnc_symbol == "POLR2J4")
+> ww1
+[1] 13904 16764
+> apply(TPM[ww1,], 1, summary)
+        ENSG00000214783 ENSG00000272655
+Min.         0.05283354        1.465628
+1st Qu.      0.13283694        2.847635
+Median       0.24306353        4.553373
+Mean         0.30998173        5.257387
+3rd Qu.      0.46654971        6.969313
+Max.         1.02518078       15.206549
+> 
+> w2rm = union(which(geneInfo$hgnc_symbol == ""), c(13745,13904))
+> 
+> TPM = TPM[-c(w2rm),]
+> geneInfo = geneInfo[-c(w2rm),]
+> 
+> dim(TPM)
+[1] 15725    28
+> dim(geneInfo)
+[1] 15725     9
+> all(rownames(TPM)==geneInfo$ensembl_gene_id)
+[1] TRUE
+> 
+> #-------------------------------------------------------------------#
+> #                SECTION 5 - GeneSet and Weights                    #
+> #-------------------------------------------------------------------#
+> ### Run Epic and use EPIC_Extract.R
+> MixDat_tot = TPM
+> rownames(MixDat_tot) = geneInfo$hgnc_symbol
+> 
+> EPIC_Bref = EPIC(bulk = MixDat_tot,scaleExprs = TRUE,reference = "BRef")
+> EPIC_Tref = EPIC(bulk = MixDat_tot,scaleExprs = TRUE,reference = "TRef")
+Warning messages:
+1: In EPIC(bulk = MixDat_tot, scaleExprs = TRUE, reference = "TRef") :
+  The optimization didn't fully converge for some samples:
+SRR3184285; SRR3184295
+ - check fit.gof for the convergeCode and convergeMessage
+2: In EPIC(bulk = MixDat_tot, scaleExprs = TRUE, reference = "TRef") :
+  mRNA_cell value unknown for some cell types: CAFs, Endothelial - using the default value of 0.4 for these but this might bias the true cell proportions from all cell types.
+> 
+> ### Prepare data for ICeD-T run
+> source("./programs/EPIC_Extract.R")
+> # Expression and variance summarized by cell type
+> # "TRef_leprof_r" "TRef_eprof_r"  "TRef_vprof_r" 
+> TRefVar  = load("./data/TRef_Data/TRef_Var_weights.RData")
+> # Raw expression by cell -- one object per cell type
+> # "Bdat_r"   "CAFdat_r" "CD4dat_r" "CD8dat_r" "Edat_r"   "Mdat_r"   "NKdat_r" 
+> TRefPdat = load("./data/TRef_Data/TRef_purData.RData")
+> 
+> if(Geneset=="Original"){
++   ### Use the EPIC gene set but rescale pure data for reweighting
++   load("./programs/EPIC-master/data/TRef.rda")
++   
++   Egenes = TRef$sigGenes
++   
++   commonGenes = intersect(rownames(Bdat_r),rownames(MixDat_tot))
++   Egenes = Egenes[which(Egenes%in%commonGenes)]
++   
++   Bscl   = scaleCounts(counts = Bdat_r,sigGenes = Egenes,renormGenes = commonGenes)$counts
++   CAFscl = scaleCounts(counts = CAFdat_r,sigGenes = Egenes,renormGenes = commonGenes)$counts
++   CD4scl = scaleCounts(counts = CD4dat_r,sigGenes = Egenes,renormGenes = commonGenes)$counts
++   CD8scl = scaleCounts(counts = CD8dat_r,sigGenes = Egenes,renormGenes = commonGenes)$counts
++   Escl   = scaleCounts(counts = Edat_r,sigGenes = Egenes,renormGenes = commonGenes)$counts
++   Mscl   = scaleCounts(counts = Mdat_r,sigGenes = Egenes,renormGenes = commonGenes)$counts
++   NKscl  = scaleCounts(counts = NKdat_r,sigGenes = Egenes,renormGenes = commonGenes)$counts
++   
++   Brvar    = apply(X = log(Bscl+1e-5),MARGIN = 1,FUN = var)
++   CAFrvar  = apply(X = log(CAFscl+1e-5),MARGIN = 1,FUN = var)
++   CD4rvar  = apply(X = log(CD4scl+1e-5),MARGIN = 1,FUN = var)
++   CD8rvar  = apply(X = log(CD8scl+1e-5),MARGIN = 1,FUN = var)
++   Ervar    = apply(X = log(Escl+1e-5),MARGIN = 1,FUN = var)
++   Mrvar    = apply(X = log(Mscl+1e-5),MARGIN = 1,FUN = var)
++   NKrvar   = apply(X = log(NKscl+1e-5),MARGIN = 1,FUN = var)
++   
++   EPIC_res_ICeDT = EPIC_Extract(bulk = MixDat_tot,scaleExprs = TRUE,reference = "TRef")
++   
++   g2useFin = intersect(names(Brvar),commonGenes)
++   g2useFin = intersect(g2useFin,Egenes)
++   
++   bulk = EPIC_res_ICeDT$bulk[g2useFin,]
++   refProfiles = EPIC_res_ICeDT$ref[g2useFin,]
++   refVar      = cbind(Brvar,CAFrvar,CD4rvar,CD8rvar,Ervar,Mrvar,NKrvar)
++   refVar      = refVar[g2useFin,]
++   colnames(refVar) = c("Bcells","CAFs","CD4_Tcells","CD8_Tcells","Endothelial","Macrophages","NKcells")
++   
++ } else if(Geneset=="Revised"){
++   load("./programs/EPIC-master/data/TRef.rda")
++   
++   Egenes = union(FList_tot,rownames(X))
++   
++   commonGenes = intersect(rownames(Bdat_r),rownames(MixDat_tot))
++   Egenes = Egenes[which(Egenes%in%commonGenes)]
++   
++   MIXscl = scaleCounts(counts = MixDat_tot,sigGenes = Egenes,renormGenes = commonGenes)$counts
++   Bscl   = scaleCounts(counts = Bdat_r,sigGenes = Egenes,renormGenes = commonGenes)$counts
++   CAFscl = scaleCounts(counts = CAFdat_r,sigGenes = Egenes,renormGenes = commonGenes)$counts
++   CD4scl = scaleCounts(counts = CD4dat_r,sigGenes = Egenes,renormGenes = commonGenes)$counts
++   CD8scl = scaleCounts(counts = CD8dat_r,sigGenes = Egenes,renormGenes = commonGenes)$counts
++   Escl   = scaleCounts(counts = Edat_r,sigGenes = Egenes,renormGenes = commonGenes)$counts
++   Mscl   = scaleCounts(counts = Mdat_r,sigGenes = Egenes,renormGenes = commonGenes)$counts
++   NKscl  = scaleCounts(counts = NKdat_r,sigGenes = Egenes,renormGenes = commonGenes)$counts
++   
++   Bexp     = apply(X = Bscl,MARGIN=1,FUN=mean)
++   CAFexp   = apply(X = CAFscl,MARGIN=1,FUN=mean)
++   CD4exp   = apply(X = CD4scl,MARGIN=1,FUN=mean)
++   CD8exp   = apply(X = CD8scl,MARGIN=1,FUN=mean)
++   Eexp     = apply(X = Escl,MARGIN=1,FUN=mean)
++   Mexp     = apply(X = Mscl,MARGIN=1,FUN=mean)
++   NKexp    = apply(X = NKscl,MARGIN=1,FUN=mean)
++   
++   Brvar    = apply(X = log(Bscl+1e-5),MARGIN = 1,FUN = var)
++   CAFrvar  = apply(X = log(CAFscl+1e-5),MARGIN = 1,FUN = var)
++   CD4rvar  = apply(X = log(CD4scl+1e-5),MARGIN = 1,FUN = var)
++   CD8rvar  = apply(X = log(CD8scl+1e-5),MARGIN = 1,FUN = var)
++   Ervar    = apply(X = log(Escl+1e-5),MARGIN = 1,FUN = var)
++   Mrvar    = apply(X = log(Mscl+1e-5),MARGIN = 1,FUN = var)
++   NKrvar   = apply(X = log(NKscl+1e-5),MARGIN = 1,FUN = var)
++   
++   bulk = MIXscl[Egenes,]
++   
++   refProfiles = cbind(Bexp,CAFexp,CD4exp,CD8exp,Eexp,Mexp,NKexp)
++   refProfiles = refProfiles[Egenes,]
++   colnames(refProfiles) = c("Bcells","CAFs","CD4_Tcells","CD8_Tcells",
++                             "Endothelial","Macrophages","NKcells")
++   
++   refVar      = cbind(Brvar,CAFrvar,CD4rvar,CD8rvar,Ervar,Mrvar,NKrvar)
++   refVar      = refVar[Egenes,]
++   colnames(refVar) = c("Bcells","CAFs","CD4_Tcells","CD8_Tcells",
++                        "Endothelial","Macrophages","NKcells")
++   
++ }
+Warning messages:
+1: In EPIC_Extract(bulk = MixDat_tot, scaleExprs = TRUE, reference = "TRef") :
+  The optimization didn't fully converge for some samples:
+SRR3184285; SRR3184295
+ - check fit.gof for the convergeCode and convergeMessage
+2: In EPIC_Extract(bulk = MixDat_tot, scaleExprs = TRUE, reference = "TRef") :
+  mRNA_cell value unknown for some cell types: CAFs, Endothelial - using the default value of 0.4 for these but this might bias the true cell proportions from all cell types.
+> 
+> #-------------------------------------------------------------------#
+> #                SECTION 6 - Run Data                               #
+> #-------------------------------------------------------------------#
+> 
+> # Using ICeDT package
+> fitnw = ICeDT::ICeDT(Y=bulk, Z=refProfiles, tumorPurity=NULL, refVar=NULL,
++                      rhoInit=NULL, maxIter_prop = 500, maxIter_PP = 250, 
++                      rhoConverge = 1e-3)
+Adding 1e-5 to Z to ensure vallid log transformation.
+Iter 1: max diff of rho: 0.385709800237134
+.........
+Iter 11: max diff of rho: 0.0129840272922392
+.........
+Iter 21: max diff of rho: 0.00169524385322456
+.........
+Iter 31: max diff of rho: 0.00123423507271048
+> 
+> fitw0 = ICeDT::ICeDT(Y=bulk, Z=refProfiles, tumorPurity=NULL, refVar=refVar,
++                      rhoInit=NULL, maxIter_prop = 500, maxIter_PP = 250, 
++                      rhoConverge = 1e-3)
+Adding 1e-5 to Z to ensure vallid log transformation.
+Iter 1: max diff of rho: 0.407283399129799
+.........
+Iter 11: max diff of rho: 0.00776717185999876
+.........
+Iter 21: max diff of rho: 0.0014170557791318
+There were 50 or more warnings (use warnings() to see the first 50)
+> 
+> save(fitnw,fitw0,file=sprintf("./data/ICeDT_ExpandedFits_GeneSet%s.RData",Geneset))
+> save(EPIC_Bref, EPIC_Tref, file="./data/EPIC_Fits.RData")
+> 
+> load(sprintf("./data/ICeDT_ExpandedFits_GeneSet%s.RData",Geneset))
+> 
+> #-------------------------------------------------------------------#
+> #                SECTION 7 - PROCESS OUTPUT                         #
+> #-------------------------------------------------------------------#
+> pinfo = read.table("./data/patient_info.txt", sep="\t", as.is=TRUE, 
++                    header=TRUE)
+> dim(pinfo)
+[1] 39 23
+> pinfo[1:2,]
+  Patient.ID            irRECIST Study.site Gender Age Disease.Status
+1        Pt1 Progressive Disease       UCLA      F  66            M1b
+2        Pt2    Partial Response       UCLA      M  55            M1c
+  Overall.Survival Vital.Status Previous.MAPKi     Anatomical.Location BRAF
+1              607         Dead              N L post. Thigh, inf., SC    -
+2              927        Alive              N                    Lung    -
+  NRAS                                NF1     Treatment   Biopsy.Time WES
+1 Q61L                               <NA> Pembrolizumab pre-treatment   1
+2    - Frame_Shift_Ins H31fs, Splice_Site Pembrolizumab pre-treatment   1
+  RNAseq SRA.tumor.WES SRA.normal.WES AccessionID.WES SRA.tumor.RNA
+1      1    SRR3083866     SRR3083867      SRP067938+    SRR3184279
+2      1    SRR3083839     SRR3083840      SRP067938+    SRR3184280
+  accessionID.RNAseq   matchID
+1           GSE78220 Pt15-M431
+2           GSE78220       Pt2
+> 
+> pinfo[,c("irRECIST", "SRA.tumor.RNA")]
+              irRECIST SRA.tumor.RNA
+1  Progressive Disease    SRR3184279
+2     Partial Response    SRR3184280
+3     Partial Response          <NA>
+4     Partial Response    SRR3184281
+5     Partial Response    SRR3184282
+6     Partial Response    SRR3184283
+7  Progressive Disease    SRR3184284
+8    Complete Response    SRR3184285
+9    Complete Response    SRR3184286
+10 Progressive Disease    SRR3184287
+11 Progressive Disease          <NA>
+12 Progressive Disease    SRR3184288
+13   Complete Response    SRR3184289
+14 Progressive Disease    SRR3184290
+15    Partial Response    SRR3184291
+16 Progressive Disease    SRR3184292
+17 Progressive Disease          <NA>
+18    Partial Response          <NA>
+19    Partial Response    SRR3184293
+20 Progressive Disease    SRR3184294
+21    Partial Response          <NA>
+22 Progressive Disease    SRR3184295
+23 Progressive Disease    SRR3184296
+24    Partial Response          <NA>
+25 Progressive Disease    SRR3184297
+26   Complete Response          <NA>
+27   Complete Response    SRR3184298
+28   Complete Response    SRR3184299
+29    Partial Response    SRR3184300
+30 Progressive Disease    SRR3184301
+31 Progressive Disease          <NA>
+32 Progressive Disease    SRR3184302
+33 Progressive Disease    SRR3184303
+34   Complete Response          <NA>
+35   Complete Response          <NA>
+36    Partial Response    SRR3184304
+37 Progressive Disease          <NA>
+38    Partial Response    SRR3184305
+39    Partial Response    SRR3184306
+> 
+> pinfo$SRA.tumor.RNA
+ [1] "SRR3184279" "SRR3184280" NA           "SRR3184281" "SRR3184282"
+ [6] "SRR3184283" "SRR3184284" "SRR3184285" "SRR3184286" "SRR3184287"
+[11] NA           "SRR3184288" "SRR3184289" "SRR3184290" "SRR3184291"
+[16] "SRR3184292" NA           NA           "SRR3184293" "SRR3184294"
+[21] NA           "SRR3184295" "SRR3184296" NA           "SRR3184297"
+[26] NA           "SRR3184298" "SRR3184299" "SRR3184300" "SRR3184301"
+[31] NA           "SRR3184302" "SRR3184303" NA           NA          
+[36] "SRR3184304" NA           "SRR3184305" "SRR3184306"
+> table(rownames(EPIC_Tref$cellFractions) %in% pinfo$SRA.tumor.RNA)
+
+TRUE 
+  28 
+> 
+> pinfo = pinfo[match(rownames(EPIC_Tref$cellFractions), pinfo$SRA.tumor.RNA),]
+> table(rownames(EPIC_Tref$cellFractions) == pinfo$SRA.tumor.RNA)
+
+TRUE 
+  28 
+> table(pinfo$irRECIST)
+
+  Complete Response    Partial Response Progressive Disease 
+                  5                  10                  13 
+> 
+> #-------------------------------------------------------------------#
+> #                SECTION 8 - PLOTTING RESULTS                       #
+> #-------------------------------------------------------------------#
+> figures_dir = sprintf("./figures/GeneSet%s/",Geneset)
+> dir.create(figures_dir, recursive = TRUE)
+Warning message:
+In dir.create(figures_dir, recursive = TRUE) :
+  './figures/GeneSetOriginal' already exists
+> 
+> for(j in c("nw","w0")){
++   eval(parse(text=sprintf("renorm4 = t(fit%s$rho)",j)))
++   # normalize using cell size factors
++   renorm4 = t(t(renorm4)/c(0.40,0.40,0.40,0.40,0.40,0.40,1.42,0.43))
++   renorm4 = renorm4/rowSums(renorm4)
++   
++   renorm4 = renorm4[,-c(1)]
++   renorm4 = renorm4/rowSums(renorm4)
++   
++   if(j=="nw"){renorm_ICeDT_nw = renorm4}
++   if(j=="w0"){renorm_ICeDT_w0 = renorm4}
++   
++   toplot = renorm4
++   toplot[which(toplot > 50)] = 50
++   
++   palette.gr.marray = colorRampPalette(c("blue", "white", "red"))
++   subtype_cols = rep("darkgreen", nrow(pinfo))
++   subtype_cols[which(pinfo$irRECIST == "Progressive Disease")] = "orange"
++   table(pinfo$irRECIST, subtype_cols)
++   
++   pdf(file.path(figures_dir, sprintf("cell_types_ICeDT_%s.pdf",j)), width=8, height=8)
++   
++   heatmap.2(as.matrix(toplot), trace = "none", col = palette.gr.marray, 
++             Rowv = TRUE, Colv = TRUE, dendrogram = "both", key = TRUE, 
++             sepwidth = c(0.01, 0.01), offsetCol=0.1, srtCol=45, 
++             key.title=NA, key.ylab=NA, margin=c(10,8), 
++             RowSideColors = subtype_cols)
++   
++   dev.off()
++   
++   pdf(file.path(figures_dir, sprintf("cell_types_ICeDT_%s_boxplot.pdf",j)), width=8, height=6)
++   par(mar=c(12,4,1,1), bty="n")
++   boxplot(renorm4, las=2)
++   dev.off()
++   
++   pdf(file.path(figures_dir, sprintf("ICeDT_%s_CD8_vs_response.pdf",j)), width=4, height=4)
++   par(mar=c(10,4,1,1), bty="n", las=2)
++   boxplot(renorm4[,4] ~ pinfo$irRECIST, ylab="CD8+ T cell proportion", outline=FALSE, 
++           ylim=c(0, max(renorm4[,4])))
++   set.seed(1234)
++   stripchart(renorm4[,4] ~ pinfo$irRECIST, method="jitter", jitter = 0.2, 
++              vertical=TRUE, add=TRUE, pch=20, col="darkred")
++   dev.off()
++ }
+> 
+> ### Tumor References
+> renorm4 = EPIC_Tref$cellFractions[,-c(8)]
+> renorm4 = renorm4/rowSums(renorm4)
+> 
+> renorm_EPIC = renorm4
+> 
+> toplot = renorm4
+> toplot[which(toplot > 50)] = 50
+> 
+> palette.gr.marray = colorRampPalette(c("blue", "white", "red"))
+> subtype_cols = rep("darkgreen", nrow(pinfo))
+> subtype_cols[which(pinfo$irRECIST == "Progressive Disease")] = "orange"
+> table(pinfo$irRECIST, subtype_cols)
+                     subtype_cols
+                      darkgreen orange
+  Complete Response           5      0
+  Partial Response           10      0
+  Progressive Disease         0     13
+> 
+> pdf(file.path(figures_dir, "cell_types_EPIC_Tref.pdf"), width=8, height=8)
+> 
+> heatmap.2(as.matrix(toplot), trace = "none", col = palette.gr.marray, 
++           Rowv = TRUE, Colv = TRUE, dendrogram = "both", key = TRUE, 
++           sepwidth = c(0.01, 0.01), offsetCol=0.1, srtCol=45, 
++           key.title=NA, key.ylab=NA, margin=c(10,8), 
++           RowSideColors = subtype_cols)
+> 
+> dev.off()
+null device 
+          1 
+> 
+> pdf(file.path(figures_dir, "cell_types_EPIC_TREF_boxplot.pdf"), width=8, height=6)
+> par(mar=c(12,4,1,1), bty="n")
+> boxplot(renorm4, las=2)
+> dev.off()
+null device 
+          1 
+> 
+> pdf(file.path(figures_dir, "EPICTRef_CD8_vs_response.pdf"), width=4, height=4)
+> par(mar=c(10,4,1,1), bty="n", las=2)
+> boxplot(renorm4[,4] ~ pinfo$irRECIST, ylab="CD8+ T cell proportion", outline=FALSE, 
++         ylim=c(0, max(renorm4[,4])))
+> set.seed(1234)
+> stripchart(renorm4[,4] ~ pinfo$irRECIST, method="jitter", jitter = 0.2, 
++            vertical=TRUE, add=TRUE, pch=20, col="darkred")
+> dev.off()
+null device 
+          1 
+> 
+> #-------------------------------------------------------------------#
+> # CIBERSORT Read In                                                 #
+> #-------------------------------------------------------------------#
+> ### Full, LM22 Ref
+> CSORT_Full_LM22 = read.table(file = "./data/CIBERSORT.Output_SunMelExt_LM22NQNorm.csv",
++                              sep=",",header=TRUE,row.names = 1)
+> 
+> CSORT_CTSize = rep(0.4,22)
+> 
+> BLoc    = c(1,2)
+> PlasLoc = c(3)
+> TLoc    = c(4,5,6,7,8,9,10)
+> NKLoc   = c(11,12)
+> MonoLoc = c(13,14,15,16,17,18)
+> GranLoc = c(19,20,21,22)
+> 
+> CSORT_CTSize[NKLoc]   = 0.43
+> CSORT_CTSize[MonoLoc] = 1.42
+> CSORT_CTSize[GranLoc] = 0.15
+> 
+> renorm_CSORT = CSORT_Full_LM22[,1:22]
+> renorm_CSORT = t(t(renorm_CSORT)/CSORT_CTSize)
+> renorm_CSORT = renorm_CSORT/rowSums(renorm_CSORT)
+> 
+> pdf("./figures/CIBERSORT_CD8_vs_response.pdf", width=4, height=4)
+> par(mar=c(10,4,1,1), bty="n", las=2)
+> boxplot(renorm_CSORT[,4] ~ pinfo$irRECIST, ylab="CD8+ T cell proportion", outline=FALSE, 
++         ylim=c(0, max(renorm_CSORT[,4])))
+> set.seed(1234)
+> stripchart(renorm_CSORT[,4] ~ pinfo$irRECIST, method="jitter", jitter = 0.2, 
++            vertical=TRUE, add=TRUE, pch=20, col="darkred")
+> dev.off()
+null device 
+          1 
+> 
+> ### Using the TRef Data
+> CSORT_Full_TRef = read.table(file = "./data/CIBERSORT.Output_SunMelExt_TRefNQNorm.csv",
++                              sep=",",header=TRUE,row.names = 1)
+> 
+> renorm_CSORT_TRef = CSORT_Full_TRef[,1:7]
+> 
+> renorm_CSORT_TRef = t(t(renorm_CSORT_TRef)/c(0.40,0.40,0.40,0.40,0.40,1.42,0.43))
+> renorm_CSORT_TRef = renorm_CSORT_TRef/rowSums(renorm_CSORT_TRef)
+> 
+> pdf("./figures/CIBERSORT_TRef_CD8_vs_response.pdf", width=4, height=4)
+> par(mar=c(10,4,1,1), bty="n", las=2)
+> boxplot(renorm_CSORT_TRef[,4] ~ pinfo$irRECIST, ylab="CD8+ T cell proportion", outline=FALSE, 
++         ylim=c(0, max(renorm_CSORT_TRef[,4])))
+> set.seed(1234)
+> stripchart(renorm_CSORT_TRef[,4] ~ pinfo$irRECIST, method="jitter", jitter = 0.2, 
++            vertical=TRUE, add=TRUE, pch=20, col="darkred")
+> dev.off()
+null device 
+          1 
+> 
+> 
+> #-------------------------------------------------------------------#
+> # JONCKHEERE-TERPSTRA test                                          #
+> #-------------------------------------------------------------------#
+> 
+> ## Set category labels in numerical order (Complete = 1 , Partial = 2 , Progressive = 3)
+> disCat_num = ifelse(test = pinfo$irRECIST=="Complete Response",yes = 1,
++                     no = ifelse(test = pinfo$irRECIST=="Partial Response",yes = 2,
++                                 no = ifelse(test = pinfo$irRECIST=="Progressive Disease",yes = 3,no=NA)))
+> 
+> table(disCat_num,pinfo$irRECIST)
+          
+disCat_num Complete Response Partial Response Progressive Disease
+         1                 5                0                   0
+         2                 0               10                   0
+         3                 0                0                  13
+> 
+> ### 
+> jonckheere.test(x=renorm_ICeDT_nw[,4],g = disCat_num,alternative = "decreasing")
+
+	Jonckheere-Terpstra test
+
+data:  
+JT = 81, p-value = 0.03845
+alternative hypothesis: decreasing
+
+> jonckheere.test(x=renorm_ICeDT_w0[,4],g = disCat_num,alternative = "decreasing")
+
+	Jonckheere-Terpstra test
+
+data:  
+JT = 73, p-value = 0.01669
+alternative hypothesis: decreasing
+
+> jonckheere.test(x=renorm_EPIC[,4],g = disCat_num,alternative = "decreasing")
+
+	Jonckheere-Terpstra test
+
+data:  
+JT = 97, p-value = 0.1425
+alternative hypothesis: decreasing
+
+> jonckheere.test(x=renorm_CSORT[,4],g = disCat_num,alternative = "decreasing")
+
+	Jonckheere-Terpstra test
+
+data:  
+JT = 110, p-value = 0.3046
+alternative hypothesis: decreasing
+
+> 
+> #-------------------------------------------------------------------#
+> #                SECTION 9 - CHECK ABBERANT PROBABILITY             #
+> #-------------------------------------------------------------------#
+> 
+> p0 = fitnw$cProb
+> dim(p0)
+[1] 98 28
+> 
+> p1 = fitw0$cProb
+> dim(p1)
+[1] 98 28
+> 
+> 
+> p0[1:2,1:5]
+          [,1]      [,2]      [,3]      [,4]      [,5]
+[1,] 0.6633829 0.5026623 0.5373479 0.5251449 0.5007075
+[2,] 0.5474278 0.5026619 0.4979434 0.5251434 0.5003868
+> p1[1:2,1:5]
+          [,1]      [,2]      [,3]      [,4]      [,5]
+[1,] 0.6162707 0.5052547 0.6037684 0.5333648 0.5008152
+[2,] 0.4448884 0.5052035 0.4530454 0.5276537 0.4492715
+> 
+> p0 = data.matrix(p0)
+> p1 = data.matrix(p1)
+> 
+> q90 <- function(v){
++   qs = quantile(v, probs=c(0.10, 0.90))
++   qs[2] - qs[1]
++ }
+> 
+> pdf(sprintf("./figures/probConsistent_GeneSet%s.pdf",Geneset), 
++     width=9, height=3)
+> par(mar=c(5,4,1,1), bty="n", mfrow=c(1,3), cex=0.8)
+> plot(pmax(density(c(p0))$y, density(c(p1))$y), main="", xlim=c(0,1),
++      xlab="probability consistent", ylab="density", type="n")
+> lines(density(c(p0)), lty=1, col="black")
+> lines(density(c(p1)), lty=2, col="red")
+> legend("topright", c("no weight", "w/ weight"), lty=c(1,2), 
++        col=c("black", "red"), bty="n")
+> 
+> plot(apply(p0, 1, median), apply(p0, 1, q90), 
++      xlab="median prob. consistent", ylab="90 percentile - 10 percentile")
+> plot(apply(p1, 1, median), apply(p1, 1, q90), 
++      xlab="median prob. consistent", ylab="90 percentile - 10 percentile")
+> 
+> dev.off()
+null device 
+          1 
+> 
+> # Scatterplot of predicted vs. observed gene expression
+> dim(fitw0$rho[-1,])
+[1]  7 28
+> dim(refProfiles)
+[1] 98  7
+> dim(bulk)
+[1] 98 28
+> predicted_bulk_nw = refProfiles %*% fitnw$rho[-1,]
+> predicted_bulk_w0 = refProfiles %*% fitw0$rho[-1,]
+> p0_cutoffs = quantile(p0, c(0.333,0.666))
+> p1_cutoffs = quantile(p1, c(0.333,0.666))
+> 
+> cat(sprintf("Consistent probability cutoffs for model w/o weight: %.3f, %.3f \n", 
++             p0_cutoffs[1], p0_cutoffs[2]))
+Consistent probability cutoffs for model w/o weight: 0.509, 0.549 
+> cat(sprintf("Consistent probability cutoffs for model w/ weight: %.3f, %.3f \n", 
++             p1_cutoffs[1], p1_cutoffs[2]))
+Consistent probability cutoffs for model w/ weight: 0.512, 0.538 
+> 
+> # Geneset=="Revised":
+> # Consistent probability cutoffs for model w/o weight: 0.558, 0.680 
+> # Consistent probability cutoffs for model w/ weight: 0.946, 0.983
+> # Geneset=="Original":
+> # Consistent probability cutoffs for model w/o weight: 0.509, 0.549 
+> # Consistent probability cutoffs for model w/ weight: 0.512, 0.538 
+> 
+> pdf(sprintf("./figures/ExpectedVsObservedExpr_GeneSet%s.pdf", 
++             Geneset), width=9, height=6)
+> par(mar=c(5,4,1,1), bty="n", mfrow=c(2,3), cex=0.8)
+> 
+> # plot observed vs. expected expression, stratified by 3-quantiles
+> plot_log1p = function(x, y, ...) {
++   smoothScatter(log(x+1e-5), log(y+1e-5), xlim=c(-5, 10), ylim=c(-5, 10), ...)
++   legend("bottomright", bty="n",
++          legend=sprintf("Pearson correlation = %.2f", cor(log(x+1e-5), log(y+1e-5))))
++ }
+> 
+> plot_log1p(c(predicted_bulk_nw)[p0 < p0_cutoffs[1]], c(bulk)[p0 < p0_cutoffs[1]],
++      xlab="Predicted gene expression", ylab="Observed gene expression",
++      sub="model w/o weight", main="low prob of being consistent")
+> plot_log1p(c(predicted_bulk_nw)[p0 >= p0_cutoffs[1] & p0 <= p0_cutoffs[2]], 
++            c(bulk)[p0 >= p0_cutoffs[1] & p0 <= p0_cutoffs[2]], 
++      xlab="Predicted gene expression", ylab="Observed gene expression",
++      sub="model w/o weight", main="med prob of being consistent")
+> plot_log1p(c(predicted_bulk_nw)[p0 > p0_cutoffs[2]], c(bulk)[p0 > p0_cutoffs[2]], 
++      xlab="Predicted gene expression", ylab="Observed gene expression",
++      sub="model w/o weight", main="high prob of being consistent")
+> 
+> plot_log1p(c(predicted_bulk_w0)[p1 < p1_cutoffs[1]], c(bulk)[p1 < p1_cutoffs[1]], 
++      xlab="Predicted gene expression", ylab="Observed gene expression",
++      sub="model w/ weight", main="low prob of being consistent")
+> plot_log1p(c(predicted_bulk_w0)[p1 >= p1_cutoffs[1] & p1 <= p1_cutoffs[2]], 
++            c(bulk)[p1 >= p1_cutoffs[1] & p1 <= p1_cutoffs[2]], 
++      xlab="Predicted gene expression", ylab="Observed gene expression",
++      sub="model w/ weight", main="med prob of being consistent")
+> plot_log1p(c(predicted_bulk_w0)[p1 > p1_cutoffs[2]], c(bulk)[p1 > p1_cutoffs[2]], 
++      xlab="Predicted gene expression", ylab="Observed gene expression",
++      sub="model w/ weight", main="high prob of being consistent")
+> 
+> dev.off()
+null device 
+          1 
+> 
+> 
+> setwd("./programs")
+> sessionInfo()
+R version 3.5.1 (2018-07-02)
+Platform: x86_64-apple-darwin15.6.0 (64-bit)
+Running under: macOS High Sierra 10.13.6
+
+Matrix products: default
+BLAS: /Library/Frameworks/R.framework/Versions/3.5/Resources/lib/libRblas.0.dylib
+LAPACK: /Library/Frameworks/R.framework/Versions/3.5/Resources/lib/libRlapack.dylib
+
+locale:
+[1] en_US.UTF-8/en_US.UTF-8/en_US.UTF-8/C/en_US.UTF-8/en_US.UTF-8
+
+attached base packages:
+[1] parallel  stats4    stats     graphics  grDevices utils     datasets 
+[8] methods   base     
+
+other attached packages:
+ [1] ICeDT_0.99.1         gtools_3.8.1         clinfun_1.0.15      
+ [4] EPIC_1.1.2           alabama_2015.3-1     numDeriv_2016.8-1   
+ [7] org.Hs.eg.db_3.7.0   AnnotationDbi_1.44.0 IRanges_2.16.0      
+[10] S4Vectors_0.20.1     Biobase_2.42.0       BiocGenerics_0.28.0 
+[13] gplots_3.0.1.1       hqreg_1.4            quantreg_5.38       
+[16] SparseM_1.77         nnls_1.4            
+
+loaded via a namespace (and not attached):
+ [1] Rcpp_1.0.0         bit_1.1-14         lattice_0.20-38    blob_1.1.1        
+ [5] caTools_1.17.1.1   grid_3.5.1         KernSmooth_2.23-15 DBI_1.0.0         
+ [9] MatrixModels_0.4-1 bit64_0.9-7        digest_0.6.18      Matrix_1.2-15     
+[13] bitops_1.0-6       memoise_1.1.0      RSQLite_2.1.1      gdata_2.18.0      
+[17] compiler_3.5.1     mvtnorm_1.0-8      pkgconfig_2.0.2   
+> 
+> q(save="no")
+> proc.time()
+   user  system elapsed 
+113.896   3.952 118.379 

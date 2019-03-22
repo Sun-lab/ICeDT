@@ -1,0 +1,114 @@
+sampleID	cellType	label	study
+A_LW_mastcellctrl.Chtanova_immune.A_LW_mastcellctr	Mast cells resting	Mast resting	Chtanova
+A_MF_ControlMASTCELL.Chtanova_immune.A_MF_ControlMASTCEL	Mast cells resting	Mast resting	Chtanova
+A_LW_mastcellIgE.Chtanova_immune.A_LW_mastcellIg	Mast cells activated	Mast activated	Chtanova
+A_MF_IgEMASTCELL.Chtanova_immune.A_MF_IgEMASTCEL	Mast cells activated	Mast activated	Chtanova
+A_LW_neutrophil.Chtanova_immune.A_LW_neutrophi	Neutrophils	Neutrophils	Chtanova
+A_MF_neutrophils.Chtanova_immune.A_MF_neutrophil	Neutrophils	Neutrophils	Chtanova
+A_TS_MSNeutroLPS.Chtanova_immune.A_TS_MSNeutroLP	Neutrophils	Neutrophils	Chtanova
+Neutrophil.Resting.1.IRIS_GSE22886.GSM565378	Neutrophils	Neutrophils	Abbas
+Neutrophil.Resting.2.IRIS_GSE22886.GSM565379	Neutrophils	Neutrophils	Abbas
+Neutrophil.Resting.3.IRIS_GSE22886.GSM565380	Neutrophils	Neutrophils	Abbas
+Neutrophil.Resting.4.IRIS_GSE22886.GSM565381	Neutrophils	Neutrophils	Abbas
+Neutrophil.Resting.5.IRIS_GSE22886.GSM565382	Neutrophils	Neutrophils	Abbas
+A_MF_2hrEosinophils.Chtanova_immune.A_MF_2hrEosinophil	Eosinophils	Eosinophils	Chtanova
+A_MF_ControlEosinophil.Chtanova_immune.A_MF_ControlEosinophil	Eosinophils	Eosinophils	Chtanova
+Monocyte.Day0.1.IRIS_GSE22886.GSM565330	Monocytes	Monocytes	Abbas
+Monocyte.Day0.2.IRIS_GSE22886.GSM565331	Monocytes	Monocytes	Abbas
+Monocyte.Day0.3.IRIS_GSE22886.GSM565332	Monocytes	Monocytes	Abbas
+Monocyte.Day0.4.IRIS_GSE22886.GSM565333	Monocytes	Monocytes	Abbas
+Monocyte.Day0.5.IRIS_GSE22886.GSM565334	Monocytes	Monocytes	Abbas
+Monocyte.Day0.6.IRIS_GSE22886.GSM565335	Monocytes	Monocytes	Abbas
+Monocyte.Day0.7.IRIS_GSE22886.GSM565336	Monocytes	Monocytes	Abbas
+Monocyte.Day0.8.IRIS_GSE22886.GSM565337	Monocytes	Monocytes	Abbas
+Monocyte.Day0.9.IRIS_GSE22886.GSM565338	Monocytes	Monocytes	Abbas
+Monocyte.Day0.10.IRIS_GSE22886.GSM565339	Monocytes	Monocytes	Abbas
+Monocyte.Day0.11.IRIS_GSE22886.GSM565340	Monocytes	Monocytes	Abbas
+Monocyte.Day0.12.IRIS_GSE22886.GSM565341	Monocytes	Monocytes	Abbas
+Monocyte.Day7.1.IRIS_GSE22886.GSM565354	Macrophages M0	Macrophages M0	Abbas
+Monocyte.Day7.2.IRIS_GSE22886.GSM565355	Macrophages M0	Macrophages M0	Abbas
+Monocyte.Day7.3.IRIS_GSE22886.GSM565356	Macrophages M0	Macrophages M0	Abbas
+Monocyte.Day7.4.IRIS_GSE22886.GSM565357	Macrophages M0	Macrophages M0	Abbas
+Monocyte.Day7.5.IRIS_GSE22886.GSM565358	Macrophages M0	Macrophages M0	Abbas
+Monocyte.Day7.6.IRIS_GSE22886.GSM565359	Macrophages M0	Macrophages M0	Abbas
+Monocyte.Day7.7.IRIS_GSE22886.GSM565360	Macrophages M0	Macrophages M0	Abbas
+Monocyte.Day7.8.IRIS_GSE22886.GSM565361	Macrophages M0	Macrophages M0	Abbas
+Monocyte.Day7.9.IRIS_GSE22886.GSM565362	Macrophages M0	Macrophages M0	Abbas
+Monocyte.Day7.10.IRIS_GSE22886.GSM565363	Macrophages M0	Macrophages M0	Abbas
+Monocyte.Day7.11.IRIS_GSE22886.GSM565364	Macrophages M0	Macrophages M0	Abbas
+Monocyte.Day7.12.IRIS_GSE22886.GSM565365	Macrophages M0	Macrophages M0	Abbas
+classical.or.M1.activated.macrophages.rep1.M1_M2_GSE7138.GSM115055	Macrophages M1	Macrophages M1	Cho
+classical.or.M1.activated.macrophages.rep2.M1_M2_GSE7138.GSM115056	Macrophages M1	Macrophages M1	Cho
+classical.or.M1.activated.macrophages.rep3.M1_M2_GSE7138.GSM115057	Macrophages M1	Macrophages M1	Cho
+Alternative.or.M2.activated.macrophages.rep1.M1_M2_GSE7138.GSM115058	Macrophages M2	Macrophages M2	Cho
+Alternative.or.M2.activated.macrophages.rep2.M1_M2_GSE7138.GSM115059	Macrophages M2	Macrophages M2	Cho
+Alternative.or.M2.activated.macrophages.rep3.M1_M2_GSE7138.GSM115060	Macrophages M2	Macrophages M2	Cho
+DendriticCell.Control.1.IRIS_GSE22886.GSM565366	Dendritic cells resting	Dendritic resting	Abbas
+DendriticCell.Control.2.IRIS_GSE22886.GSM565367	Dendritic cells resting	Dendritic resting	Abbas
+DendriticCell.Control.3.IRIS_GSE22886.GSM565368	Dendritic cells resting	Dendritic resting	Abbas
+DendriticCell.Control.4.IRIS_GSE22886.GSM565369	Dendritic cells resting	Dendritic resting	Abbas
+DendriticCell.Control.5.IRIS_GSE22886.GSM565370	Dendritic cells resting	Dendritic resting	Abbas
+DendriticCell.Control.6.IRIS_GSE22886.GSM565371	Dendritic cells resting	Dendritic resting	Abbas
+DendriticCell.LPSstimulated.1.IRIS_GSE22886.GSM565372	Dendritic cells activated	Dendritic activated	Abbas
+DendriticCell.LPSstimulated.2.IRIS_GSE22886.GSM565373	Dendritic cells activated	Dendritic activated	Abbas
+DendriticCell.LPSstimulated.3.IRIS_GSE22886.GSM565374	Dendritic cells activated	Dendritic activated	Abbas
+DendriticCell.LPSstimulated.4.IRIS_GSE22886.GSM565375	Dendritic cells activated	Dendritic activated	Abbas
+DendriticCell.LPSstimulated.5.IRIS_GSE22886.GSM565376	Dendritic cells activated	Dendritic activated	Abbas
+DendriticCell.LPSstimulated.6.IRIS_GSE22886.GSM565377	Dendritic cells activated	Dendritic activated	Abbas
+NKcell.control.1.IRIS_GSE22886.GSM565293	NK cells resting	NK resting	Abbas
+NKcell.control.2.IRIS_GSE22886.GSM565294	NK cells resting	NK resting	Abbas
+NKcell.control.3.IRIS_GSE22886.GSM565295	NK cells resting	NK resting	Abbas
+NKcell.control.4.IRIS_GSE22886.GSM565296	NK cells resting	NK resting	Abbas
+NKcell.IL2stimulated.1.IRIS_GSE22886.GSM565297	NK cells activated	NK activated	Abbas
+NKcell.IL2stimulated.2.IRIS_GSE22886.GSM565298	NK cells activated	NK activated	Abbas
+NKcell.IL2stimulated.3.IRIS_GSE22886.GSM565299	NK cells activated	NK activated	Abbas
+NKcell.IL2stimulated.4.IRIS_GSE22886.GSM565300	NK cells activated	NK activated	Abbas
+NKcell.IL2stimulated.5.IRIS_GSE22886.GSM565301	NK cells activated	NK activated	Abbas
+NKcell.IL15stimulated.1.IRIS_GSE22886.GSM565302	NK cells activated	NK activated	Abbas
+NKcell.IL15stimulated.2.IRIS_GSE22886.GSM565303	NK cells activated	NK activated	Abbas
+NKcell.IL15stimulated.3.IRIS_GSE22886.GSM565304	NK cells activated	NK activated	Abbas
+NKcell.IL15stimulated.4.IRIS_GSE22886.GSM565305	NK cells activated	NK activated	Abbas
+NKcell.IL15stimulated.5.IRIS_GSE22886.GSM565306	NK cells activated	NK activated	Abbas
+NKcell.IL15stimulated.6.IRIS_GSE22886.GSM565307	NK cells activated	NK activated	Abbas
+Bcell.Memory_IgG_IgA.1.IRIS_GSE22886.GSM565315	B cells memory	B memory	Abbas
+Bcell.Memory_IgG_IgA.2.IRIS_GSE22886.GSM565316	B cells memory	B memory	Abbas
+Bcell.Memory_IgG_IgA.3.IRIS_GSE22886.GSM565317	B cells memory	B memory	Abbas
+Bcell.Memory_IgG_IgA.4.IRIS_GSE22886.GSM565318	B cells memory	B memory	Abbas
+Bcell.Memory_IgM.1.IRIS_GSE22886.GSM565319	B cells memory	B memory	Abbas
+Bcell.Memory_IgM.2.IRIS_GSE22886.GSM565320	B cells memory	B memory	Abbas
+Bcell.Memory_IgM.3.IRIS_GSE22886.GSM565321	B cells memory	B memory	Abbas
+Bcell.Memory_IgM.4.IRIS_GSE22886.GSM565322	B cells memory	B memory	Abbas
+Bcell.naive.1.IRIS_GSE22886.GSM565308	B cells naive	B naive	Abbas
+Bcell.naive.2.IRIS_GSE22886.GSM565309	B cells naive	B naive	Abbas
+Bcell.naive.3.IRIS_GSE22886.GSM565310	B cells naive	B naive	Abbas
+Bcell.naive.4.IRIS_GSE22886.GSM565311	B cells naive	B naive	Abbas
+Bcell.naive.5.IRIS_GSE22886.GSM565312	B cells naive	B naive	Abbas
+Bcell.naive.6.IRIS_GSE22886.GSM565313	B cells naive	B naive	Abbas
+Bcell.naive.7.IRIS_GSE22886.GSM565314	B cells naive	B naive	Abbas
+PlasmaCell.FromPBMC.1.IRIS_GSE22886.GSM565323	Plasma cells	Plasma	Abbas
+PlasmaCell.FromPBMC.2.IRIS_GSE22886.GSM565324	Plasma cells	Plasma	Abbas
+PlasmaCell.FromPBMC.3.IRIS_GSE22886.GSM565325	Plasma cells	Plasma	Abbas
+PlasmaCell.FromBoneMarrow.1.IRIS_GSE22886.GSM565326	Plasma cells	Plasma	Abbas
+PlasmaCell.FromBoneMarrow.2.IRIS_GSE22886.GSM565327	Plasma cells	Plasma	Abbas
+PlasmaCell.FromBoneMarrow.3.IRIS_GSE22886.GSM565328	Plasma cells	Plasma	Abbas
+PlasmaCell.FromBoneMarrow.4.IRIS_GSE22886.GSM565329	Plasma cells	Plasma	Abbas
+TN1.TFH_E.MEXP.750.TN1	T cells CD4 naive	CD4+ T	Rasheed
+TN2.TFH_E.MEXP.750.TN2	T cells CD4 naive	CD4+ T	Rasheed
+TN3.TFH_E.MEXP.750.TN3	T cells CD4 naive	CD4+ T	Rasheed
+CD8Tcell.N0.1.IRIS_GSE22886.GSM565269	T cells CD8	CD8+ T	Abbas
+CD8Tcell.N0.2.IRIS_GSE22886.GSM565270	T cells CD8	CD8+ T	Abbas
+CD8Tcell.N0.3.IRIS_GSE22886.GSM565271	T cells CD8	CD8+ T	Abbas
+CD8Tcell.N0.4.IRIS_GSE22886.GSM565272	T cells CD8	CD8+ T	Abbas
+MemoryTcell.RO.activated.1.IRIS_GSE22886.GSM565290	T cells CD4 memory activated	CD4+ T memory activated	Abbas
+MemoryTcell.RO.activated.2.IRIS_GSE22886.GSM565291	T cells CD4 memory activated	CD4+ T memory activated	Abbas
+MemoryTcell.RO.activated.3.IRIS_GSE22886.GSM565292	T cells CD4 memory activated	CD4+ T memory activated	Abbas
+MemoryTcell.RO.unactivated.1.IRIS_GSE22886.GSM565287	T cells CD4 memory resting	CD4+ T memory resting	Abbas
+MemoryTcell.RO.unactivated.2.IRIS_GSE22886.GSM565288	T cells CD4 memory resting	CD4+ T memory resting	Abbas
+MemoryTcell.RO.unactivated.3.IRIS_GSE22886.GSM565289	T cells CD4 memory resting	CD4+ T memory resting	Abbas
+A_TS_RN_gdTcells.Chtanova_immune.A_TS_RN_gdTcell	T cells gamma delta	T gd	Chtanova
+A_TS_RN_gdTcellsREP_A.Chtanova_immune.A_TS_RN_gdTcellsREP_A	T cells gamma delta	T gd	Chtanova
+TFH_E.MEXP.750.CXCR5hiICOShi1	T cells follicular helper	Tfh	Rasheed
+TFH_E.MEXP.750.CXCR5hiICOShi2	T cells follicular helper	Tfh	Rasheed
+TFH_E.MEXP.750.CXCR5hiICOShi3	T cells follicular helper	Tfh	Rasheed
+Treg_1.TREGs_GSE4527.GSM101519	T cells regulatory (Tregs)	Tregs	Ocklenburg
+Treg_2.TREGs_GSE4527.GSM101521	T cells regulatory (Tregs)	Tregs	Ocklenburg
