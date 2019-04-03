@@ -1,11 +1,17 @@
 ---
-title: "Running ICeDT on Hugo et al. Data"
-author: "Douglas Roy Wilson Jr., Chong Jin"
+title: "Running ICeDT using simulation or use Hugo et al. Data"
+author: "Douglas Roy Wilson Jr., Chong Jin, Wei Sun"
 date: "3/21/2019"
 output: pdf_document
 ---
 
-This document explains how to run ICeDT on Hugo et al. data using `./program/running_ICeDT_on_Hugo_data.R`.
+# Simulations
+
+The simulation code example and results are saved in folder simulation. This simulation code simulate data with 1000 initial values and evaluate the convergence of the algorithm. More extensive simulations were based on the same code, but should be ran run on a computaitonal cluster to finish in reasonable time. 
+
+# Real data analysis for Hugo et al. data
+
+Next we describe how to run ICeDT on Hugo et al. data using `./program/running_ICeDT_on_Hugo_data.R`.
 
 ## Packages needed
 

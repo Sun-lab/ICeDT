@@ -1,0 +1,401 @@
+
+R version 3.5.0 (2018-04-23) -- "Joy in Playing"
+Copyright (C) 2018 The R Foundation for Statistical Computing
+Platform: x86_64-apple-darwin15.6.0 (64-bit)
+
+R is free software and comes with ABSOLUTELY NO WARRANTY.
+You are welcome to redistribute it under certain conditions.
+Type 'license()' or 'licence()' for distribution details.
+
+  Natural language support but running in an English locale
+
+R is a collaborative project with many contributors.
+Type 'contributors()' for more information and
+'citation()' on how to cite R or R packages in publications.
+
+Type 'demo()' for some demos, 'help()' for on-line help, or
+'help.start()' for an HTML browser interface to help.
+Type 'q()' to quit R.
+
+> 
+> library(ICeDT)
+Loading required package: alabama
+Loading required package: numDeriv
+Loading required package: gtools
+> 
+> dimX <- function(v){ if(is.null(dim(v))){r=length(v)} else{r=dim(v)}; r }
+> 
+> #-------------------------------------------------------------------#
+> # Call Simulation Function                                          #
+> #-------------------------------------------------------------------#
+> 
+> pctAb     = 20
+> nCT       = 5
+> nrep      = 5
+> subjPur   = 0.45
+> nStarts   = 1000
+> 
+> # simulate data for 135 individuals
+> set.seed(666)
+> data(mean_var_relation)
+> simData = simFunc(nS=135, nG=250, nrep=nrep, nCT=nCT, pctAb=pctAb,
++                   meanVar_Rel=mean_var_relation)
+> names(simData)
+[1] "MGene_Exp"    "PGene_Exp"    "cellType"     "aberrant"     "rho"         
+[6] "tumor_purity"
+> lapply(simData, dimX)
+$MGene_Exp
+[1] 250 135
+
+$PGene_Exp
+[1] 250  25
+
+$cellType
+[1] 25
+
+$aberrant
+[1] 250
+
+$rho
+[1]   5 135
+
+$tumor_purity
+[1] 135
+
+> simData$tumor_purity[1:5]
+[1] 0.8513188 0.6029154 0.6582970 0.6808798 0.7493846
+> simData$PGene_Exp[1:2,1:7]
+            tumor        tumor        tumor        tumor        tumor
+[1,] 7.931848e-05 2.859189e-04 3.817089e-05 1.096758e-04 1.080461e-04
+[2,] 2.574509e-05 7.253033e-05 3.896733e-05 2.049412e-05 8.703739e-05
+            CT2        CT2
+[1,] 3034.01723 3893.93296
+[2,]   61.96612   33.01001
+> 
+> # choose the subjects with given tumor purity
+> chooseSubj = which.min(abs(simData$tumor_purity - subjPur))
+> simData$tumor_purity[chooseSubj]
+[1] 0.4531337
+> simData$rho[,chooseSubj, drop=F]
+           [,1]
+[1,] 0.45313368
+[2,] 0.20721935
+[3,] 0.23165261
+[4,] 0.05944259
+[5,] 0.04855177
+> 
+> simData$singleVec    = simData$MGene_Exp[,chooseSubj, drop=F]
+> simData$single_GnExp = matrix(simData$singleVec, nrow=nrow(simData$singleVec), 
++                             ncol=nStarts)
+> simData$singleRho    = simData$rho[,chooseSubj, drop=F]
+> 
+> 
+> # simulate initia values from non-informative priors
+> startPoints = matrix(NA, nrow=nCT, ncol=nStarts)
+> 
+> for(i in 1:nStarts){
++   startPoints[,i] = rdirichlet(n=1, alpha=rep(1,nCT))
++ }
+> 
+> simData$startPoints  = startPoints
+> 
+> #-------------------------------------------------------------------#
+> # estimate signature matrix
+> #-------------------------------------------------------------------#
+> 
+> X = simData$PGene_Exp
+> dim(X)
+[1] 250  25
+> X[1:2,1:7]
+            tumor        tumor        tumor        tumor        tumor
+[1,] 7.931848e-05 2.859189e-04 3.817089e-05 1.096758e-04 1.080461e-04
+[2,] 2.574509e-05 7.253033e-05 3.896733e-05 2.049412e-05 8.703739e-05
+            CT2        CT2
+[1,] 3034.01723 3893.93296
+[2,]   61.96612   33.01001
+> X = X[,which(colnames(X) != "tumor")]
+> 
+> refE = refEstimate(X)
+> lapply(refE, dimX)
+$refMat
+[1] 250   4
+
+$refVar
+[1] 250   4
+
+$ctMu
+[1] 250   4
+
+$ctVar
+[1] 250   4
+
+> 
+> refE$refMat[1:2,]
+            CT2        CT3         CT4       CT5
+[1,] 3869.36411 992.272995 3102.820206 849.60168
+[2,]   78.45819   7.947046    7.470082  59.98775
+> refE$refVar[1:2,]
+            CT2       CT3       CT4       CT5
+[1,] 0.09148839 0.1196739 0.2716482 0.1365715
+[2,] 0.22901550 0.1410654 0.3117909 0.4490935
+> refE$ctMu[1:2,]
+          CT2     CT3      CT4      CT5
+[1,] 8.200511 6.83614 7.957212 6.678798
+[2,] 4.244652 1.96588 1.882645 3.948717
+> refE$ctVar[1:2,]
+           CT2       CT3       CT4       CT5
+[1,] 0.1206693 0.1277156 0.1657092 0.1319400
+[2,] 0.2358273 0.2138398 0.2565212 0.2908468
+> 
+> cor(c(refE$refVar), c(refE$ctVar))
+[1] 0.8844
+> 
+> #-------------------------------------------------------------------#
+> # estimation without giving initial values of rho
+> #-------------------------------------------------------------------#
+> 
+> Y = simData$single_GnExp
+> Z = refE$refMat
+> tumorPurity  = NULL
+> refVar       = NULL
+> rhoInit      = NULL
+> maxIter_prop = 100
+> maxIter_PP   = 100
+> rhoConverge  = 1e-3
+> 
+> startTime = proc.time()
+> Testing_Orig = ICeDT(Y = Y, Z = Z, tumorPurity = tumorPurity, 
++                      refVar = refVar, rhoInit = rhoInit, 
++                      maxIter_prop = maxIter_prop, 
++                      maxIter_PP = maxIter_PP, 
++                      rhoConverge = rhoConverge)
+Iter 1: max diff of rho: 0.157128744070477
+> 
+> endTime = proc.time()
+> endTime - startTime
+   user  system elapsed 
+ 33.533   0.681  34.281 
+> 
+> lapply(Testing_Orig, dimX)
+$rho
+[1]    5 1000
+
+$sigma2C
+[1] 1000
+
+$sigma2A
+[1] 1000
+
+$cProp
+[1] 1000
+
+$cProb
+[1]  250 1000
+
+> 
+> # true value of rho's
+> simData$singleRho
+           [,1]
+[1,] 0.45313368
+[2,] 0.20721935
+[3,] 0.23165261
+[4,] 0.05944259
+[5,] 0.04855177
+> # estimated values of rho's
+> summary(t(Testing_Orig$rho))
+     tumor             CT2              CT3              CT4         
+ Min.   :0.4212   Min.   :0.1959   Min.   :0.2541   Min.   :0.07036  
+ 1st Qu.:0.4212   1st Qu.:0.1959   1st Qu.:0.2541   1st Qu.:0.07036  
+ Median :0.4212   Median :0.1959   Median :0.2541   Median :0.07036  
+ Mean   :0.4212   Mean   :0.1959   Mean   :0.2541   Mean   :0.07036  
+ 3rd Qu.:0.4212   3rd Qu.:0.1959   3rd Qu.:0.2541   3rd Qu.:0.07036  
+ Max.   :0.4212   Max.   :0.1959   Max.   :0.2541   Max.   :0.07036  
+      CT5         
+ Min.   :0.05849  
+ 1st Qu.:0.05849  
+ Median :0.05849  
+ Mean   :0.05849  
+ 3rd Qu.:0.05849  
+ Max.   :0.05849  
+> 
+> #-------------------------------------------------------------------#
+> # estimatino with initial values of rho, no purity
+> #-------------------------------------------------------------------#
+> 
+> rhoInit = simData$startPoints[-c(1),]
+> rownames(rhoInit) = colnames(Z)
+> dim(rhoInit)
+[1]    4 1000
+> rhoInit[,1:5]
+          [,1]       [,2]       [,3]      [,4]       [,5]
+CT2 0.25486428 0.14139011 0.05976005 0.4863579 0.30351891
+CT3 0.31205875 0.06605824 0.35938640 0.1549744 0.01340257
+CT4 0.06467002 0.07885557 0.03410641 0.0275695 0.45356499
+CT5 0.22185964 0.22295666 0.30722823 0.1531092 0.02891290
+> summary(colSums(rhoInit))
+   Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
+0.09074 0.70325 0.84201 0.79963 0.93140 0.99966 
+> 
+> startTime = proc.time()
+> Testing_w_rho = ICeDT(Y = Y, Z = Z, tumorPurity = tumorPurity, 
++                      refVar = refVar, rhoInit = rhoInit, 
++                      maxIter_prop = maxIter_prop, 
++                      maxIter_PP = maxIter_PP, 
++                      rhoConverge = rhoConverge)
+Iter 1: max diff of rho: 0.819599112882345
+.........
+Iter 11: max diff of rho: 0.00120792454864674
+.........
+Iter 21: max diff of rho: 0.00121115868276064
+......> endTime = proc.time()
+> endTime - startTime
+   user  system elapsed 
+304.458   7.582 312.452 
+> 
+> lapply(Testing_w_rho, dimX)
+$rho
+[1]    5 1000
+
+$sigma2C
+[1] 1000
+
+$sigma2A
+[1] 1000
+
+$cProp
+[1] 1000
+
+$cProb
+[1]  250 1000
+
+> # true value of rho's
+> simData$singleRho
+           [,1]
+[1,] 0.45313368
+[2,] 0.20721935
+[3,] 0.23165261
+[4,] 0.05944259
+[5,] 0.04855177
+> # estimated values of rho's
+> summary(t(Testing_w_rho$rho))
+     tumor             CT2              CT3              CT4         
+ Min.   :0.4366   Min.   :0.1843   Min.   :0.2455   Min.   :0.07372  
+ 1st Qu.:0.4403   1st Qu.:0.1844   1st Qu.:0.2459   1st Qu.:0.07566  
+ Median :0.4403   Median :0.1844   Median :0.2461   Median :0.07570  
+ Mean   :0.4402   Mean   :0.1845   Mean   :0.2461   Mean   :0.07567  
+ 3rd Qu.:0.4403   3rd Qu.:0.1845   3rd Qu.:0.2463   3rd Qu.:0.07572  
+ Max.   :0.4403   Max.   :0.1880   Max.   :0.2466   Max.   :0.07573  
+      CT5         
+ Min.   :0.05325  
+ 1st Qu.:0.05340  
+ Median :0.05348  
+ Mean   :0.05352  
+ 3rd Qu.:0.05358  
+ Max.   :0.05532  
+> 
+> #-------------------------------------------------------------------#
+> # estimatino with initial values of rho, with purity
+> #-------------------------------------------------------------------#
+> 
+> tumorPurity  = rep(simData$singleRho[1,1], ncol(Y))
+> rhoInit2 = t(t(rhoInit)/colSums(rhoInit) * (1 - tumorPurity))
+> dim(rhoInit2)
+[1]    4 1000
+> rhoInit2[,1:5]
+          [,1]       [,2]       [,3]      [,4]        [,5]
+CT2 0.16330922 0.15183089 0.04297379 0.3235635 0.207636227
+CT3 0.19995768 0.07093623 0.25843683 0.1031012 0.009168652
+CT4 0.04143857 0.08467856 0.02452612 0.0183414 0.310282226
+CT5 0.14216085 0.23942064 0.22092958 0.1018603 0.019779214
+> summary(colSums(rhoInit2))
+   Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
+ 0.5469  0.5469  0.5469  0.5469  0.5469  0.5469 
+> 
+> startTime = proc.time()
+> Testing_wr_pu = ICeDT(Y = Y, Z = Z, tumorPurity = tumorPurity, 
++                      refVar = refVar, rhoInit = rhoInit2, 
++                      maxIter_prop = maxIter_prop, 
++                      maxIter_PP = maxIter_PP, 
++                      rhoConverge = rhoConverge)
+Iter 1: max diff of rho: 0.425287617176536
+..> endTime = proc.time()
+> endTime - startTime
+   user  system elapsed 
+ 47.056   0.760  48.398 
+> 
+> lapply(Testing_wr_pu, dimX)
+$rho
+[1]    5 1000
+
+$sigma2C
+[1] 1000
+
+$sigma2A
+[1] 1000
+
+$cProp
+[1] 1000
+
+$cProb
+[1]  250 1000
+
+> # true value of rho's
+> simData$singleRho
+           [,1]
+[1,] 0.45313368
+[2,] 0.20721935
+[3,] 0.23165261
+[4,] 0.05944259
+[5,] 0.04855177
+> # estimated values of rho's
+> summary(t(Testing_wr_pu$rho))
+     tumor             CT2              CT3              CT4         
+ Min.   :0.4531   Min.   :0.1816   Min.   :0.2334   Min.   :0.07087  
+ 1st Qu.:0.4531   1st Qu.:0.1826   1st Qu.:0.2338   1st Qu.:0.07131  
+ Median :0.4531   Median :0.1830   Median :0.2340   Median :0.07160  
+ Mean   :0.4531   Mean   :0.1829   Mean   :0.2341   Mean   :0.07174  
+ 3rd Qu.:0.4531   3rd Qu.:0.1833   3rd Qu.:0.2345   3rd Qu.:0.07209  
+ Max.   :0.4531   Max.   :0.1836   Max.   :0.2352   Max.   :0.07334  
+      CT5         
+ Min.   :0.05670  
+ 1st Qu.:0.05775  
+ Median :0.05822  
+ Mean   :0.05810  
+ 3rd Qu.:0.05851  
+ Max.   :0.05899  
+> 
+> #-------------------------------------------------------------------#
+> # summarize the results
+> #-------------------------------------------------------------------#
+> 
+> png("~/research/Deconvolution/ICeDT/figures/simu_diff_initials.png", 
++     width=6, height=6, units="in", res=400)
+> par(mfrow=c(2,2), mar=c(5,4,2,1), bty="n", cex=0.8)
+> 
+> rhoInit2t = t(rbind(tumorPurity,rhoInit2))
+> summary(colSums(rhoInit2))
+   Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
+ 0.5469  0.5469  0.5469  0.5469  0.5469  0.5469 
+> rhoInit1t = t(rbind(1-colSums(rhoInit), rhoInit))
+> colnames(rhoInit1t)[1] = colnames(rhoInit2t)[1] = "purity"
+> 
+> boxplot(rhoInit2t, ylab="initial proportion", main="given tumomr purity")
+> boxplot(rhoInit1t, ylab="initial proportion", main="without tumomr purity")
+> 
+> plot(rep(simData$singleRho,each=1000),  c(t(Testing_wr_pu$rho)), 
++      xlab="true proportion", ylab="estimated proportion", 
++      main="given tumomr purity")
+> abline(0,1)
+> 
+> plot(rep(simData$singleRho,each=1000),  c(t(Testing_w_rho$rho)), 
++      xlab="true proportion", ylab="estimated proportion", 
++      main="without tumomr purity")
+> abline(0,1)
+> dev.off()
+null device 
+          1 
+> 
+> q(save="no")
+> proc.time()
+   user  system elapsed 
+386.314   9.181 396.560 
