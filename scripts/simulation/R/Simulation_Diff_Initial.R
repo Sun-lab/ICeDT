@@ -146,7 +146,7 @@ summary(t(Testing_wr_pu$rho))
 # summarize the results
 #-------------------------------------------------------------------#
 
-png("~/research/Deconvolution/ICeDT/figures/simu_diff_initials.png", 
+png("../figures/simu_diff_initials.png", 
     width=6, height=6, units="in", res=400)
 par(mfrow=c(2,2), mar=c(5,4,2,1), bty="n", cex=0.8)
 
@@ -155,17 +155,17 @@ summary(colSums(rhoInit2))
 rhoInit1t = t(rbind(1-colSums(rhoInit), rhoInit))
 colnames(rhoInit1t)[1] = colnames(rhoInit2t)[1] = "purity"
 
-boxplot(rhoInit2t, ylab="initial proportion", main="given tumomr purity")
-boxplot(rhoInit1t, ylab="initial proportion", main="without tumomr purity")
+boxplot(rhoInit2t, ylab="initial proportion", main="given tumor purity")
+boxplot(rhoInit1t, ylab="initial proportion", main="without tumor purity")
 
 plot(rep(simData$singleRho,each=1000),  c(t(Testing_wr_pu$rho)), 
      xlab="true proportion", ylab="estimated proportion", 
-     main="given tumomr purity")
+     main="given tumor purity")
 abline(0,1)
 
 plot(rep(simData$singleRho,each=1000),  c(t(Testing_w_rho$rho)), 
      xlab="true proportion", ylab="estimated proportion", 
-     main="without tumomr purity")
+     main="without tumor purity")
 abline(0,1)
 dev.off()
 

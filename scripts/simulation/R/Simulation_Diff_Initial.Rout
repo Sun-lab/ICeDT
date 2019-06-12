@@ -174,7 +174,7 @@ Iter 1: max diff of rho: 0.157128744070477
 > endTime = proc.time()
 > endTime - startTime
    user  system elapsed 
- 33.533   0.681  34.281 
+ 33.974   0.852  34.895 
 > 
 > lapply(Testing_Orig, dimX)
 $rho
@@ -250,7 +250,7 @@ Iter 21: max diff of rho: 0.00121115868276064
 ......> endTime = proc.time()
 > endTime - startTime
    user  system elapsed 
-304.458   7.582 312.452 
+320.306   8.632 329.404 
 > 
 > lapply(Testing_w_rho, dimX)
 $rho
@@ -321,7 +321,7 @@ Iter 1: max diff of rho: 0.425287617176536
 ..> endTime = proc.time()
 > endTime - startTime
    user  system elapsed 
- 47.056   0.760  48.398 
+ 52.755   0.938  55.256 
 > 
 > lapply(Testing_wr_pu, dimX)
 $rho
@@ -368,7 +368,7 @@ $cProb
 > # summarize the results
 > #-------------------------------------------------------------------#
 > 
-> png("~/research/Deconvolution/ICeDT/figures/simu_diff_initials.png", 
+> png("../figures/simu_diff_initials.png", 
 +     width=6, height=6, units="in", res=400)
 > par(mfrow=c(2,2), mar=c(5,4,2,1), bty="n", cex=0.8)
 > 
@@ -379,17 +379,17 @@ $cProb
 > rhoInit1t = t(rbind(1-colSums(rhoInit), rhoInit))
 > colnames(rhoInit1t)[1] = colnames(rhoInit2t)[1] = "purity"
 > 
-> boxplot(rhoInit2t, ylab="initial proportion", main="given tumomr purity")
-> boxplot(rhoInit1t, ylab="initial proportion", main="without tumomr purity")
+> boxplot(rhoInit2t, ylab="initial proportion", main="given tumor purity")
+> boxplot(rhoInit1t, ylab="initial proportion", main="without tumor purity")
 > 
 > plot(rep(simData$singleRho,each=1000),  c(t(Testing_wr_pu$rho)), 
 +      xlab="true proportion", ylab="estimated proportion", 
-+      main="given tumomr purity")
++      main="given tumor purity")
 > abline(0,1)
 > 
 > plot(rep(simData$singleRho,each=1000),  c(t(Testing_w_rho$rho)), 
 +      xlab="true proportion", ylab="estimated proportion", 
-+      main="without tumomr purity")
++      main="without tumor purity")
 > abline(0,1)
 > dev.off()
 null device 
@@ -398,4 +398,4 @@ null device
 > q(save="no")
 > proc.time()
    user  system elapsed 
-386.314   9.181 396.560 
+408.326  10.660 421.212 
