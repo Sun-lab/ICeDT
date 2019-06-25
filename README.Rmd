@@ -11,7 +11,12 @@ knitr::opts_chunk$set(echo = TRUE)
 
 ## Introduction
 
-This workfolow demonstrate the usage of ICeDT and also evaluate its performance using a simulated dataset. 
+This workfolow demonstrate the usage of ICeDT and also evaluate its performance using a simulated dataset. Please see the reference paper for details of the method. 
+
+ICeD-T Provides Accurate Estimates of Immune Cell Abundance in Tumor Samples by Allowing for Aberrant Gene Expression Patterns
+Douglas R. Wilson, Joseph G. Ibrahim, Wei Sun
+bioRxiv 326421; doi: https://doi.org/10.1101/326421
+
 
 ```{r library}
 library(ICeDT)
