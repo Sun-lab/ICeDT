@@ -284,7 +284,7 @@ updatePropn_Single <- function(x, Z, nCT, nG, maxIter_prop, givenPurity,
                          hin.jac = hin_jacob_noPurity, logY = logY, 
                          Z=Z, sigma2C = sigma2C_0, 
                          sigma2A = sigma2A_0, EM_wgt = EM_wgt, 
-                         control.optim=list(fnscale=-1), 
+                         control.optim = list(fnscale=-1), 
                          control.outer = list(trace=FALSE))
       
       urho_1 = auglagOut$par
@@ -316,7 +316,8 @@ updatePropn_Single <- function(x, Z, nCT, nG, maxIter_prop, givenPurity,
       sum((1-EM_wgt)*dnorm(logY,mean=mu_ijA,sd=sqrt(sigma2A_1),log=TRUE))
     
     if(logLik_1 < logLik_0 - 0.001){
-      stop("log likelihood decreased during the EM algorithm.")
+      warning("log likelihood decreased during the EM algorithm.")
+      break
     }
     
     if(max(abs(urho_1-urho_0)) < 1e-3){ break }
