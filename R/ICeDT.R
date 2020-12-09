@@ -22,8 +22,8 @@ lmInit<-function(yr, Z){
   initMod = lm(y~Z)
   
   rho  = coef(initMod)[-1]
-  wneg = which(rho < 0.005)
-  rho[wneg] = 0.05
+  wneg = which(rho < 0.0001)
+  rho[wneg] = 0.0001
   rho = (rho/sum(rho))*(1-rho_t)
   
   return(rho)
@@ -108,8 +108,8 @@ sigma2_Update <- function(logY, log_eta_ij, EM_wgt, AB_Up=FALSE,
 
 correctRho <- function(est, total){
   rho  = est
-  wneg = which(rho<0.005)
-  rho[wneg] = 0.005
+  wneg = which(rho<0.0001)
+  rho[wneg] = 0.0001
   
   rho = total*rho/sum(rho)
   
@@ -118,8 +118,8 @@ correctRho <- function(est, total){
 
 correctRho_v2 <- function(est){
   rho = est
-  wneg = which(rho<0.005)
-  rho[wneg] = 0.005
+  wneg = which(rho<0.0001)
+  rho[wneg] = 0.0001
   
   return(rho)
 }
@@ -179,7 +179,7 @@ gradFunc_givenPurity <- function(x, logY, rho_i0, Z, sigma2C, sigma2A, EM_wgt){
 # hin.jac: Jacobian of hin
 
 hin_func_noPurity <- function(x, ...){
-  return(c(x-0.005, 1-sum(x)-0.005))
+  return(c(x-0.0001, 1-sum(x)-0.0001))
 }
 
 hin_jacob_noPurity <- function(x, ...){
@@ -199,7 +199,7 @@ logLik_noPurity <- function(x, logY, Z, sigma2C, sigma2A, EM_wgt){
 
 #----------------- Likelihood (given purity) ----------------------#
 hin_func_givenPurity <- function(x, rho_i0, ...){
-  return(c(x-0.005, 1-rho_i0-sum(x)-0.005))
+  return(c(x-0.0001, 1-rho_i0-sum(x)-0.0001))
 }
 
 hin_jacob_givenPurity <-function(x, rho_i0, ...){
