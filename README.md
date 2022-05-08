@@ -1,5 +1,5 @@
 <div align="left">
-<a href=""><img src="https://img.shields.io/badge/R-%23276DC3.svg?style=square&logo=r&logoColor=pink&label=ICeDT" height="100" /></a>
+<a href=""><img src="https://img.shields.io/badge/R-%23276DC3.svg?style=square&logo=r&logoColor=pink&label=ICeDT" height="80" /></a>
 </div>
 
 <!-- badges: start -->
@@ -21,5 +21,12 @@ devtools::install_github("Sun-lab/ICeDT")
 
 ## Citation
 
-Wilson, D. R., [Jin, C.](https://github.com/chongjin), [Ibrahim, J. G.](https://sph.unc.edu/adv_profile/joseph-g-ibrahim-phd/), [Sun, W.](https://github.com/sunway1999) (2020). ICeD-T Provides Accurate Estimates of Immune Cell Abundance in Tumor Samples by Allowing for Aberrant Gene Expression Patterns. *Journal of the American Statistical Association*, 115(531), 1055-1065. [[HTML](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC7529339/), [PDF](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC7529339/pdf/nihms-1540037.pdf)]
+Wilson, D. R., [Jin, C.](https://github.com/chongjin), 
+[Ibrahim, J. G.](https://sph.unc.edu/adv_profile/joseph-g-ibrahim-phd/), 
+[Sun, W.](https://github.com/sunway1999) (2020). ICeD-T 
+Provides Accurate Estimates of Immune Cell Abundance in 
+Tumor Samples by Allowing for Aberrant Gene Expression Patterns. 
+*Journal of the American Statistical Association*, 115(531), 
+1055-1065. [[HTML](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC7529339/), 
+[PDF](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC7529339/pdf/nihms-1540037.pdf)]
 
